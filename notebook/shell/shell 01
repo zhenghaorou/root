@@ -1,0 +1,250 @@
+shell 翻译官
+/bin/bash
+
+cat /etc/shells
+yum -y install ksh
+
+bash优点 
+tab键, 历史记录,快捷键,别名,管道,重定向
+
+bash-->sh-->ksh
+
+一个规范的脚本格式
+1,声明解释器 , 作者信息
+#!/bin/bash  
+#作者:
+2,编写注释,解释脚本功能,步骤,变量含义等等...
+#XXXX
+3,编写代码
+echo 123
+
+#!/bin/bash
+#这是一个测试脚本
+echo "hello world"
+
+chmod u+x test1.sh
+执行脚本的方式
+1,添加x权限
+2,调用新解释器执行脚本
+bash test1.sh      //开启子进程
+3,使用当前解释器
+source test1.sh    //不开启子进程,可以简写为 .
+. test1.sh  	   //效果同上
+
+编写脚本,在/opt中创建目录abc,然后进入目录abc
+
+#!/bin/bash
+mkdir /opt/abc
+cd /opt/abc
+
+
+#!/bin/bash
+echo 123
+exit
+
+/etc/yum.repos.d/XXX.repo
+
+编写一键部署yum仓库的脚本:
+#!/bin/bash
+rm -rf /etc/yum.repos.d/*.repo
+echo "[abc]
+name=test
+baseurl=http://172.25.254.254/content/rhel7.0/x86_64/dvd/
+enabled=1
+gpgcheck=0"  >  /etc/yum.repos.d/abc.repo
+脚本编写完后,可以用bash test.sh执行
+然后使用yum repolist检查结果
+编写,一键部署ftp服务的脚本:
+#!/bin/bash
+yum -y install vsftpd  &> /dev/null
+systemctl restart vsftpd
+systemctl enable vsftpd
+
+systemctl stop firewalld   //为了测试脚本,可以临时关防火墙
+
+常量 不会变化  脚本功能单一
+变量  灵活多变  增加脚本功能, 增加灵活,多用变量可使脚本更强大!
+
+变量的种类:
+1, 自定义变量
+变量名称=变量的值,变量名可以使用大小写字母,数字,下划线,禁止使用特殊符号,不能以数字开头.
+a=10    //定义变量
+echo $a   //查看变量
+unset a    //取消变量
+123a=10   //错误命名
+echo ${a}RMB
+2, 环境变量
+UID USER HOME HOSTNAME SHELL PWD PS1 一级提示符  PS2 
+PATH 存放命令的路径
+
+3, 位置变量
+$1 $2 $3 ....
+4,预定义变量
+$$ $* $# $? $0
+
+#!/bin/bash
+echo $1  执行脚本后的第1个参数
+echo $2  执行脚本后的第2个参数
+echo $3  执行脚本后的第3个参数
+echo $0  执行的脚本名
+echo $$  执行脚本时的进程号
+echo $*  所有位置变量
+echo $#  所有位置变量的个数
+echo $?  判断上一条指令是否成功,0是成功,非0是失败
+
+编写脚本,创建用户tom,配置密码789
+#!/bin/bash
+useradd tom
+echo 789 | passwd --stdin tom
+
+升级版本
+#!/bin/bash
+useradd $1
+echo $2 | passwd --stdin $1
+
+bash test.sh abcd 1234    //使用脚本创建用户abcd并配置密码1234
+
+env   查看所有环境变量
+set   查看所有变量
+
+
+""  双引号 界定范围
+	touch "a b"   //创建1个文件,不加引号则创建2个
+	a=10
+	echo "$a"   //效果不变
+''   单引号 界定范围  ,且具有屏蔽特殊符号的作用
+	touch 'x y'
+	echo '$a'   //$符号调用变量的值失效
+``    反撇号 或 $(  )    获取命令输出的结果
+	a=ls
+	echo $a
+	a=`ls`    或   a=$(ls)
+	echo $a
+
+
+#!/bin/bash
+read -p "请输入用户名"  u
+useradd $u
+stty -echo
+read -p "请输入密码"  p
+stty echo
+echo $p | passwd --stdin $u
+
+stty -echo  屏蔽回显
+stty echo   恢复回显
+
+export  发布全局变量,可以使子进程使用父进程定义的变量
+
+export a=10   //定义+发布全局变量
+export a      //如果变量存在,则直接发布全局变量
+bash        //进入子进程
+echo $a  //可以使用父进程定义的变量,以为已经发布为全局变量
+
+vim /etc/profile
+
+unset 变量名     //取消变量
+export -n  变量名     // 取消全局效果,恢复局部
+
+
+\    转义符号
+
+求模   取余数
+
+shell中的运算
+方法一:
+expr 1 + 1     加
+expr 2 - 1	   减
+expr 2 \* 2	   乘
+expr 4 / 2     除
+expr 10 % 3    取余
+a=10
+expr $a + $a  //也支持变量
+方法二:
+echo $[1+1]
+echo $[1-1]
+echo $[a+a]	   //调用变量不用多次添加$符号
+echo $[1*1]    //乘法无需转义
+
+方法三:
+let 不输出结果,可以方便的修改变量的值
+
+创建新变量 :
+let c=1+1   //通过运算新创建变量c
+let c=a+1   //常量变量均可使用
+
+修改现有变量 :
+let a=a+1   //常规思路,将a本身加1
+let a++		//主流写法,将a本身加1
+
+let a=a-1   //常规思路,将a本身减1
+let a--		//主流写法,将a本身减1
+
+let a=a+2   //常规思路,将a本身加2
+let a+=2    //主流写法
+
+let a*=100  //修改变量本身,将a乘以100
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

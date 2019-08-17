@@ -1,0 +1,507 @@
+Web服务器(Linux下)
+Apache/Nginx/Tengine/Lighttod
+Tomcat/IBM WebSphere/Jboss	这三个都是使用java语言搭建的
+
+Nginx("engine x")
+-轻量级HTTP服务器,压缩包大小只有150k,(轻量-->运行速度快,漏洞少)
+-高性能,理论并发量高达5万(httpd有2-3万并发)
+-官网:http://nginx.org/
+并发量:可同时支持的请求数量
+
+Nginx配置文件以及目录
+/usr/local/nginx/	安装目录
+conf/nginx.conf		主配置文件
+html			网页目录
+logs			日志文件
+sbin/nginx		启动脚本
+
+主配置文件的第二十多行里面存有nginx的日志信息和其内置变量名称
+环境:四台虚拟机,配好IP地址/主机名
+################################################################################
+案例1:搭建Nginx服务器
+步骤:
+------编译安装Nginx------
+1:yum -y install gcc  \
+  pcre-devel openssl-devel		安装编译包和依赖包
+2:useradd -s /sbin/nologin nginx	添加用户(软件会继承启动者权限)
+3:tar -xf nginx-1.10.3			默认解压到当前路径下
+4:cd nginx-1.10.3			切换到包目录下(一定要在包目录下编译)
+5:./configure \				执行检查脚本并指定参数
+--prefix=/usr/local/nginx \		自定义安装路径
+--user=nginx \				指定账户名称
+--group=nginx \				指定组名称
+--with-http_ssl_module			开启加密功能(带with的都是可选功能)
+6:make && make install			编译并安装
+
+------Nginx命令------
+nginx				开启服务
+nginx -s stop			关闭服务
+nginx -s reload			重新加载配置文件(热更新)
+nginx -V			查看信息
+ln -s /usr/local/nginx/sbin/nginx /sbin/
+
+-----热更新Nginx-----
+1:tar -xf nginx-1.12.2		解压新版本包
+2:cd nginx-1.12.2		切换到新版本包目录下
+3:./configure \			执行检查脚本并指定参数
+--user=nginx \
+--group=nginx \
+--with-http_ssl_module
+4:make 				编译(不要安装)
+5:mv nginx nginx.old		将旧程序改名备份
+6:cp nginx nginx		将新程序复制到目录下
+7:make upgrade			直接更新程序
+
+7:killall nginx			关闭所有nginx程序
+  nginx				启动nginx程序
+
+PS:编译安装的好处是若参数设置错误可以再设置一次并编译
+devel结尾的软件包都是依赖包,不能独立运行
+################################################################################
+案例2:用户认证
+---修改配置文件---
+1:进入conf/nginx.conf,在server {}里面输入两行内容
+2:auth_basic "input pass:";			认证提示符信息
+3:auth_basic_user_file "/usr/local/nginx/pass";	通行证信息
+4:yum -y install httpd-tools			安装加密工具包
+5:htpasswd -c /usr/local/nginx/pass tom		创建密码文件(-c只在第一次用)
+
+################################################################################
+案例3:基于域名的虚拟主机
+PS:另有基于IP/端口
+
+---对比nginx和httpd---
+server {
+  listen 80;
+  server_name xxx;
+  root xxx;
+  location / {
+  }
+}
+
+<VirtualHost *:80>
+  ServerName xxx
+  DocumentRoot xxx
+</VirtualHost>
+
+---添加虚拟主机---
+1:修改conf/nginx.conf配置文件		格式就是server {},有模板文件
+charset utf8;				支持主流语言编码,而ASCII码只有128个
+2:mkdir /usr/local/nginx/www		创建虚拟主机目录
+3:echo "网站" >   \
+/usr/local/nginx/www/index.html		创建首页文件
+
+---解析域名---
+1.修改客户端的/etc/hosts文件		修改本地域名解析文件
+
+################################################################################
+案例4:SSL虚拟主机
+PS:http协议是明文协议,需要使用ssl加密,也就是https
+
+---设置ssl---
+1:首先在编译安装Nginx的时候要有--with-http_ssl_module选项
+2:修改配置文件(将443端口那个虚拟主机代码块去掉注释并修改域名)
+3:在conf下生成私钥和证书
+openssl genrsa > cert.key
+openssl req -new -x509 -key cert.key > cert.pem
+4:重新加载配置生效
+
+这里的加密是整个域名,也就是整个网站的加密,网站下的文件一样也会被加密.
+
+################################################################################
+指定软件所属用户之后,使用systemctl start命令启动服务的时候,即使当前用户是root,也会瞬间切换成普通用户启动该服务.程序的权限是继承启动者的权限,程序存在漏洞会被攻击,为了安全就不能用root启动服务.这也是为什么要添加nginx用户的原因.
+当然,不指定用户的话Nginx会默认指定系统用户nobody为软件用户,效果和nginx一样
+这种机制和附属权限Set UID对比是反过来的.
+
+netstat命令:查看网络状态
+-a:显示所有端口
+-n:以数字格式显示
+-t:使用tcp的端口号
+-u:使用udp的端口号
+-l:显示正在监听的端口listen
+-p:显示使用端口的程序名program
+
+curl字符浏览器
+
+
+常见加密算法种类:
+对称加密:AES/DES,加密解密的密码一致,常用于单机数据加密.算法本身很安全,但它的工作原理导致它不安全,因为对方不知道密码,还得通过某种方式传输密码,这样就容易被抓包.
+非对称加密:RSA/DSA加密解密的密码不一致,常用于互联网传输加密,公钥(证书)用来加密,私钥用来解密
+PS:10*10+5+5=110,前面的算法就是私钥,后面的值就是公钥
+信息摘要:MD5(哈希值)/sha256,主要用于数据完整性校验
+PS:md5sum 文件名 生成校验码,可以存进日志里面,校验只校验内容,经过两次修改之后的还原内容是无法验证的
+
+################################################################################
+
+小结:以上四个案例搭建的web服务器只能用于静态网页
+静态网页(内容固定不变):pdf/doc/jpg/gif/mp3/mp4/txt/html/
+网站只会传递数据文件给用户,文件运行由用户自行解决
+动态网页(根据代码变化):shell/php/java/python/perl/ruby
+网站代码会被转给对应语言编译工具运行一遍并把结果给用户
+################################################################################
+################################################################################
+################################################################################
+案例1:部署LNMP(部署动态web所需的环境)
+Linux/Niginx/Mariadb,Mysql/Php,Perl,Python
+LNMP是常见的动态网站架构,还有LANM,A是指Apache(即httpd)
+
+---源码安装Nginx---
+1:yum -y install gcc  \
+  pcre-devel openssl-devel		安装编译包和依赖包
+2:useradd -s /sbin/nologin nginx	添加用户(软件会继承启动者权限)
+3:tar -xf nginx-1.10.3			默认解压到当前路径下
+4:cd nginx-1.10.3			切换到包目录下(一定要在包目录下编译)
+5:./configure \				执行检查脚本并指定参数
+--prefix=/usr/local/nginx \		自定义安装路径
+--user=nginx \				指定账户名称
+--group=nginx \				指定组名称
+--with-http_ssl_module			开启加密功能(带with的都是可选功能)
+6:make && make install			编译并安装
+
+---yum安装Mariadb和Php---
+1:yum -y install mariadb mariadb-server mariadb-devel
+2:yum -y install php php-mysql php-fpm
+
+---配置服务---
+1:systemctl restart mariadb
+2:systemctl restart php-fpm
+3:systemctl status mariadb
+4:systemctl status php-fpm
+5:systemctl enable mariadb
+6:systemctl enable php-fpm
+7:systemctl stop httpd
+
+php-mysql负责连接数据库mariadb,php-fpm是实时服务
+################################################################################
+案例2:搭建LNMP平台
+案例1只是部署了环境,还不能真正支持动态网页
+
+---配置php动态页面---
+1:进入conf/nginx.conf配置文件
+2:去掉location ~ \.php$ {}语句块的注释
+3:注释掉里面的fastcgi_param语句
+4:修改部分里面的include语句为fastcgi.conf
+
+---配置连接数据库---
+1:将准备好的mysql.php放入html目录下
+2.进入数据库添加用户(grant)并测试连接
+
+
+Nginx----套接字socker(9000)----通用网关接口FastCGI(n)--封装wrapper(n)----程序Application(n)--进程
+socker是fastcgi进程管理器上午套接字,他可以把不同脚本分发给不同的进程去执行,以提高脚本执行效率,缺点是比较消耗内存
+
+LNMP常用日志
+Nginx访问日志/usr/local/nginx/logs/access.log
+Nginx错误日志/usr/local/nginx/logs/error.log
+PHP默认错误日志/var/log/php-fpm/www-error.log
+################################################################################
+案例3:地址重定向
+
+---页面重写---
+1:修改conf/nginx.conf配置文件
+2:在www.a.com域名结构里面写入rewrite /a.html /b.html redirect;
+3:在html文件夹下(根据具体域名的根目录)建立b.html静态文件
+
+---Web重写---
+1:修改conf/nginx.conf配置文件
+2:在域名结构里面写入rewrite ^/ http://www.tmooc.cn;
+
+---Web子页面重写---
+1:修改conf/nginx.conf配置文件
+2:在域名结构写入rewrite ^/(.*)$ http://www.tmooc.cn/$1;
+
+---访问重写---
+1:编写两个不同的网页
+2:修改conf/nginx.conf配置文件
+3:在结构体内加入语句
+if($http_user_agent ~* firefox){
+rewrite ^(.*)$ /firefox/$1;
+}
+
+rewrite 匹配旧地址 新地址 可选项;
+server_name负责域名,rewrite负责地址,在rewrite行末尾输入redirect会临时显示真实地址,输入permanent会永久设置真实地址
+Web重写就是站点跳转,rewrite ^/中的^/是指不管输入该站点里的任何地址都可以匹配并重写(因为在地址栏里/是一定会出现的)
+################################################################################
+Nginx要负责动静分离,实现这个的是在配置文件里修改location语句,让不同的访问对应不同的命令或文件
+location语句的作用是识别匹配用户输入的地址并到对应文件夹下寻找文件,结构类似于if结构
+
+location ~ \.php$ {
+  root html;						设置html为根目录(实际上是/usr/local/nginx/html)
+  fastcgi_pass 127.0.0.1:9000;				设置请求转发到本机端口9000(也就是php解释器)
+  fastcgi_index index.php;				设置index.php为默认网页
+  include fastcgi.conf					加载其他配置文件 
+}
+location / {						匹配/的优先级最低
+  root html;						设置默认目录
+  index index.html index.htm;				设置缺省首页,只输入ip而不输入网页时会转到这里
+}
+第一个location结构体是匹配动态页面的,第二个是匹配静态页面的,这样子就实现了动静分离.
+fastcgi是进程管理器,pass是转发的意思,因为nginx本身不能解释执行脚本,所以要用fastcgi转发,php进程所用端口就是9000
+location后面可以接正则表达式,模糊匹配就用包含~,精确匹配就用全等==
+
+
+地址重定向的优势:
+缩短url,隐藏实际地址(不用输入redirect),便于用户记忆和键入,易于被搜索引擎收录
+地址重写的匹配用的都是正则表达式.有点不同的是,调用()里面的内容使用$n
+可选项:last不再读rewrite;break不再读其他语句(就是域名体里break下面的配置都会失效);redirect声明临时重写;permanent声明永久重写(这两个选项会影响爬虫策略和状态码,本身并不会有任何作用);当然全部的前提都是rewrite匹配成功.
+################################################################################
+
+
+小结:前两个案例主要描述了基本动态网站的部署,第三个案例则描述了地址重写技术,实现了动静分离,访问分离
+################################################################################
+################################################################################
+################################################################################
+案例1:Nginx反向代理(七层代理)
+反向:公网主机访问私网服务器;正向:私网主机访问公网
+---部署Apache(http)网站---
+1:web1和web2安装httpd
+2:书写各自的网页(生产环境中两网站应该是一样的,因为是一个集群里面的)
+3:(可选)设置防火墙策略和SELinux策略
+
+---实现反向代理---
+1:修改conf/nginx.conf配置文件
+2:在http块里添加语句块upstream和server
+upstream webserver {				声明集群机器
+    server 192.168.2.100:80;
+    server 192.168.2.200:;			不设置端口,默认是80
+}
+server {
+    listen 80;
+    server_name localhost;
+    location / {
+      proxy_pass http://webserver;		设置转发集群,该语句优先级很高,即使周围有其他配置语句也不影响其功能
+    }
+}
+
+---添加集群属性---
+1:给Web服务器添加参数,在集群声明中添加
+server 192.168.2.100:80 weight=1 max_fails=2 fail_timeout=30;
+server 192.168.2.101 down;			
+
+---设置调度算法---
+1:在集群声明语句首行中加入ip_hash;
+
+
+代理:(丁老师曰帮你干你干不了的活的人或物)代理类似中介,会接受(多台)客户机的请求并为其服务,在Nginx这里代理的具体含义是负责寻找Web服务器(有点路由器的感觉,但又不是路由器,路由器是负责找目标地址,而代理服务器本身就是目标地址).
+weight权重缺省值是1
+相关联想:请求中继/请求转发/请求调度
+调度:实现负载均衡的手段,将请求分发给不同的Web服务器,具有健康检查的功能
+################################################################################
+案例2:Nginx的TCP/UDP解释器(四层代理)
+应用场景:从外网远程登录进入公司的内网/数据库代理
+
+---配置Nginx---
+1:在编译安装时添加选项
+--with-stream(1.9版本后才支持)
+2:修改conf/nginx.conf配置文件
+3:在http块之外添加语句块		http工作在七层,tcp/udp工作在四层
+stream {
+    upstream backend{
+        server 192.168.2.100:22;
+        server 192.168.2.200:22;
+    }
+    server {
+        listen  12345;			这里不能用22端口,ssh已经用了22
+        proxy_connect_timeout 1s;
+        proxy_timeout 3s;
+        proxy_pass backend;
+    }
+}
+4:客户端验证ssh -p12345 -X root@192.168.4.5
+
+端口22已经被ssh软件使用了,所以nginx软件不能再使用它,每个端口只允许一个软件监听使用.
+当然软件被关闭后空闲的端口可以被其他软件拿来用,但不建议这样使用
+proxy_connect_timeout是连接超时时间,proxy_timeout是连接能够持续多久(代理多久)的时间
+如果验证不加端口号12345,那么会直接远程到proxy服务器上
+IP用于识别电脑,端口用于识别软件
+
+################################################################################
+案例3:Nginx的常见问题和优化
+
+---优化404页面---
+1:修改conf/nginx.conf配置
+2:将error 404这行的注释去掉
+
+---查看服务器信息---
+1:编译安装时要加上--with-http_stub_status_module选项
+2:修改conf/nginx.conf配置文件,在相应域名结构体里加入语句块
+location /status {
+    stub_status on;
+    #allow ipaddress;
+    #deny ipaddress;
+}
+3:验证服务器状态curl 192.168.4.5/status
+
+---优化Nginx并发量---
+1:修改conf/nginx.conf配置文件
+2:在全局配置添加语句
+worker_processes 2;			启动进程,与cpu核心数量一致
+3:在events语句块了添加语句
+events {
+    worker_connections 65535;		每个worker最大并发数
+}
+4:临时设置内核参数
+ulimit -a				查看内核属性
+ulimit -Hn 10000			设置硬规则(临时)
+ulimit -Sn 10000			设置软规则(临时)
+5:永久设置内核参数			需要重启
+vim /etc/security/limit.conf
+用户或组   硬限制或软限制   需要限制的项目   限制的值
+   * 		soft		nofile       10000
+   * 		hard  		nofile       10000
+
+---优化Nginx数据包头缓存---
+应用场景:URL过长的时候
+1:修改conf/nginx.conf配置文件
+2:在http语句块下添加语句
+client_header_buffer_size   1k;		默认请求包头的缓存
+large_client_header_buffers 4 1m;	大请求包头部信息的缓存个数与容量
+
+---设置浏览器缓存---
+1:修改conf/nginx.conf配置文件
+2:在某server语句块了写入语句
+location ~* \.(jpg|png|gif){
+  expires 30d;				缓存保留30天
+}
+
+---日志切割---
+1:
+
+---对页面进行压缩---
+
+---服务器内存缓存---
+1:把数据从硬盘临时放入内存
+
+################################################################################
+upstream是声明集群的,后面接集群名称,语句块里写集群Web服务器的ip地址,端口,权重,最大失败次数和失败超时时间,而down则是声明该服务器不参与集群调度.最大失败次数指的是Nginx连接失败几次后就不再连接(一定时间内),失败超时时间是指Web服务器达到最大失败次数后Nginx在该时间段内都不会再去连接该Web服务器.
+另外要在本机配置里设置代理转发proxy_pass来调用集群,该语句一定要放入location里面
+
+常用调度算法:
+1.ip_hash:相同客户端访问相同服务器
+在之前没有ip_hash算法的时候,如果访问网站需要认证登录的话,那么每一次访问的时候(假设不小心点到刷新),用户就会跳转到其他服务器,这时候就要重新登录认证.所以该调度算法适合有密码登录认证的网站.(有个问题,网站挂了怎么办)
+该算法实现的是宏观(全局)负载均衡,对用户来说不是负载均衡.潜在缺陷是如果某个Web服务器的用户访问非常频繁而另一个相反,这时候是无法调度的.
+而且使用该算法后Nginx会保存相应信息,相同客户端是永久访问相同服务器的,除非服务器宕机会导致暂时访问其他服务器,恢复之后又会访问回去.
+从名字可以看出,该算法识别ip的方式是哈希值,而且只看ip的前3个八位字节,同一网段(C类)客户端的会被视为相同客户端.
+http://nginx.org官网手册上有说明
+
+案例1的Nginx的代理只能实现网站的负载均衡,但是无法做到数据库的负载均衡
+
+到目前为止Nginx的担任的角色有Web服务器和调度器,关注架构的时候需要注意功能分割,不能把一台服务器看做一个节点,而是要把一台服务器看作是多个功能节点的集合.
+
+常见网站状态码:
+200一切正常/301永久重定向/302临时重定向/401用户或密码错误/403禁止访问/404文件不存在/414请求URL头部过长/500服务器内部错误/502网关错误
+
+状态页面信息参数(当前/已经):
+Active connection:当前活动的连接数量
+Accepts:已经接受的客户端的连接数量(握手次数)
+Handled:已经处理的客户端的连接数量(一般会等于Accepts,除非限制)
+Requests:客户端已经发送的请求数量(请求次数)
+Reading:当前服务器正在读取客户端请求头的数量
+Writing:当前服务器正在响应信息的数量
+Waiting:当前多少客户端在等待服务端的响应
+
+在互联网早期阶段,网站的访问是一次握手,一次请求(也就是一次请求完之后就断开)
+现代网站都是握手一次成功之后,连接会保持不断(这时候刷新网页会增加请求数Requests,而连接数Accpets不变化),当触发条件之后连接才会断开(超时断开或正常关闭)
+
+ab压力测试工具
+选项:-c 模拟人数;-n 总访问数
+测试并发数主要看c参数,总访问数影响不大
+打开firefox并在地址栏输入about:cache可以查看缓存
+
+ulimit -a可以查看系统内核的参数,open file就是具体的并发量.virtual memery是程序运行内存
+软限制是警告值,硬限制是不能超过的值,硬限制是硬性要求,并发量达到硬限制时,就不能再打开新进程了.
+并发量的优化有两个方面要注意,一方面是Nginx软件本身的限制(所以要改配置文件,Nginx理论上最高五万并发),一方面是Linux操作系统的限制(所以要改内核参数)
+
+################################################################################
+################################################################################
+################################################################################
+案例1:搭建PHP本地Session
+---部署LNMP后端服务---
+1:安装软件包gcc/openssl-devel/pcre-devel
+2:源码安装Nginx
+3:安装数据库mariadb/mariadb-server/mariadb-devel
+4:安装PHP:php/php-mysql/php-fpm
+5:修改Nginx配置文件实现动静分离(利用fastcgi)
+6:重新加载配置文件
+7:书写两个不同的网页(方便验证)
+
+---启动后端服务---
+1:停止http服务(可选),启动Nginx服务
+2:启动数据库并开机自启
+3:启动php-fpm服务并开机自启
+
+---部署Nginx调度器---
+1:下载依赖包(openssl-devel/pcre-devel/gcc)并源码安装Nginx
+2:修改Nginx配置文件实现反向代理(声明集群并转发)
+3:重新加载配置文件
+
+---测试基本环境是否完成---
+1:curl 192.168.4.5
+
+---部署测试页面---
+1:将实现准备好的php包从lnmp目录那拿下来
+2:网页访问(注意配置文件index.php要写在前面)
+3:ls /var/lib/php/session查看是否有session信息
+
+
+################################################################################
+案例2:构建memcached服务
+---安装memcached---
+1:yum -y install memcached
+
+################################################################################
+案例3:连接proxy和memcached
+---测试连接memcached服务---
+1:在后端服务器修改mem.php脚本,将localhost修改为proxy地址
+2:在后端服务器安装php-pecl-memcache扩展包,重启php-fpm服务
+################################################################################
+案例4:PHP实现session共享
+
+---修改配置文件---
+1:打开/etc/php-fpm.d/www.conf
+2:修改最后两行
+php_value[session.save_handler] = memcache
+php_value[session.save_path] = "tcp://192.168.2.5:11211"
+
+
+各种服务端口,要经常去看一看服务开没开
+web:80nginx/9000php-fpm/11211memcached/3306mariadb
+proxy:80nginx/11211/memcached/9000php-fpm
+################################################################################
+计算机依靠数字识别各种用户/文件/进程,所以uid为1000的用户被删除后,该用户所有的文件的属主会变成1000,新创建的uid为1000的用户会继承这个文件.
+用kill命令(默认-15)杀死Nginx程序,Nginx并不会关闭,而且会生成新的access.log文件,只有-s stop/killall/kill -9才能关闭Nginx程序
+kill命令的实质是给进程传递信号-1/-2/-9/-15(一共64种,kill -l查看),而不是单单杀死进程
+kill -10命令会让Nginx生成新的日志文件
+
+
+用户输入用户密码后,服务器会验证身份,通过之后生成一个session文件保存登录信息,并且会把cookie文件发给浏览器,下次浏览器重新登录的时候浏览器直接把cookie给服务器就可以通过了.
+session:存储在服务端里,保存用户名和登录信息(不存密码,存状态,密码存在另外的数据库里)
+cookie:存储在客户端里,由服务端下发,记录登录信息
+
+共享session:memcached数据库负责存储共享session
+memcached是把数据放入内存的数据库,关机就丢失,所以这个数据库又叫做缓存数据库
+
+/var/lib/systemd/system目录存放了全部服务,systemcel命令就是从这里调用配置文件,所以配置文件可以重定向服务名称(比如memcached配置文件里改成http,再用systemctl命令启动memcached服务,但结果实际上是启动了http)
+/etc/sysconfig/目录里收录了yum安装的服务的参数(端口/启动者/并发量/缓存使用)
+编译安装的软件要自行启动,但也可以自行书写配置文件放入/var/lib/systemd/system和/etc/sysconfig/,这样就可以用systemctl命令启动服务了
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,27 @@
+                                    web1(httpd)
+client ----> 代理服务器
+                                     web2(httpd)
+
+http{  7层调度
+ upstream 名称{
+   server web1;
+    server web2;
+}
+
+
+
+
+
+
+
+./configure --with-stream
+ upstream 名称｛    4层调度tcp/udp
+　　　server mysql1:3306;
+      server mysql2：3306;
+}
+server{
+   listen 3306;
+     proxy_pass 名称;
+}
+
+http {

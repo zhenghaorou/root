@@ -1,0 +1,115 @@
+1,所有交换机创建vlan 10 20
+2,所有交换机之间的链路设置trunk
+3,SW1配置虚拟接口ip
+	vlan 10  192.168.10.252
+	vlan 20  192.168.20.252
+  SW2配置虚拟接口ip
+	vlan 10  192.168.10.253
+	vlan 20  192.168.20.253
+4,配置vrrp
+SW1  vlan 10  主路由器         105
+     vlan 20  备份路由器
+SW2  vlan 20  主路由器	  105
+     vlan 10  备份路由器
+
+===========================================
+组建大型企业网络:
+
+1,所有交换机创建vlan 10 20 30 40
+	vlan batch 10 20 30 40
+	display vlan
+2,所有交换机之间的链路设置trunk
+S5700
+port-group 1
+group-member g0/0/4 g0/0/5
+port link-type trunk
+port trunk allow-pass vlan all
+S3700
+port-group 1
+group-member e0/0/1 e0/0/2
+port link-type trunk
+port trunk allow-pass vlan all
+
+3,修改设备名称 SW1~SW6
+4,配置SW1与SW2的虚拟接口地址
+SW1
+in vlan 30
+ip add 192.168.30.252 24
+in vlan 40
+ip add 192.168.40.252 24
+SW2
+in vlan 30
+ip add 192.168.30.253 24
+in vlan 40
+ip add 192.168.40.253 24
+
+5,配置vrrp
+SW1  
+vlan 10  主路由器 :
+	in vlan 10
+	vrrp vrid 10 virtual-ip 192.168.10.254	
+	vrrp vrid 10 priority 105
+     
+vlan 20  备份路由器 :
+	in vlan 20
+	vrrp vrid 20 virtual-ip 192.168.20.254
+
+vlan 30  主路由器 :
+	in vlan 30
+	vrrp vrid 30 virtual-ip 192.168.30.254	
+	vrrp vrid 30 priority 105
+     
+vlan 40  备份路由器 :
+	in vlan 40
+	vrrp vrid 40 virtual-ip 192.168.40.254
+  
+SW2  
+vlan 10  备份路由器 :
+	in vlan 10
+	vrrp vrid 10 virtual-ip 192.168.10.254	
+     
+vlan 20  主路由器 :
+	in vlan 20
+	vrrp vrid 20 virtual-ip 192.168.20.254
+	vrrp vrid 20 priority 105
+
+vlan 30  备份路由器 :
+	in vlan 30
+	vrrp vrid 30 virtual-ip 192.168.30.254	
+
+vlan 40  主路由器 :
+	in vlan 40
+	vrrp vrid 40 virtual-ip 192.168.40.254
+	vrrp vrid 40 priority 105
+
+display vrrp brief    查看结果
+为pc配置对应vlan的网关(192.168.X.254),测试是否全网互通
+
+6,添加路由器并配置ip与三层交换机互联
+
+7,在三层交换机与路由器开启ospf实现全网互通
+
+10.0.0.0~10.255.255.255
+172.16.0.0~172.31.255.255
+192.168.0.0~192.168.255.255
+
+8,路由器连接外网的接口配置ip地址,
+另外外网的交换机在vlan1配置ip地
+址100.0.0.10
+
+9,两台路由器配置 nat 
+1, acl 放行所有人
+acl 2000
+rule permit source any
+2, 在接口开启nat
+in g0/0/2
+nat outbound 2000
+
+10,两台路由器配置默认路由
+ip route-static 0.0.0.0 0 100.0.0.10
+   在ospf中宣告默认路由
+[Huawei]ospf
+[Huawei-ospf-1]default-route-advertise 
+
+
+

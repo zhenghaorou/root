@@ -1,0 +1,127 @@
+vim  交互式  增删改查
+grep 模糊查找
+sed  非交互式  增删改查
+awk  精确查找
+
+前置指令 | awk 选项  条件 指令
+awk 选项  条件 指令   文件
+
+-F  修改分隔符
+print
+
+条件
+1, 使用正则   ~    !~
+2, 字符串与数字  ==  !=   >    >=   <  <=
+3,逻辑符号  &&   ||
+
+BEGIN{}  执行1次
+{  }              执行n次
+END{}	 执行1次
+
+
+awk的if判断
+
+单分支
+{if(条件){执行指令}}
+计算系统中普通账户的数量:
+awk -F: '{if($3>=1000){x++}}END{print x}' /etc/passwd
+
+awk '{ }END{ }'
+
+双分支
+{if(条件){执行指令1}else{执行指令2}}
+计算系统中普通账户和系统账户的数量:
+awk -F: '{if($3>=1000){x++}else{y++}}END{print x,y}' /etc/passwd
+
+多分支
+{if(条件1){执行指令1}else if(条件2){执行指令2}else{执行指令3}}
+
+
+awk 数组
+变量 可以存储1个值
+数组 可以存储多个值
+
+变量名=值
+数组名[下标]=值
+
+a[1]=10
+a[2]=20
+
+awk 'BEGIN{a[1]=10;a[2]=20;print a[2],a[1]}'
+
+for(变量名称  in 值){执行指令}
+
+awk数组+for循环基本用法:
+awk 'BEGIN{a[0]=0;a[1]=11;a[2]=22; for(i in a){print i,a[i]}}'    //定义一个数组a, 有3个下标,分别对应3个值, 然后交给for循环,循环显示  下标  和  值
+
+awk数组+for循环扩展应用 :
+准备文档包含3行内容 
+abc
+abc
+xyz
+
+awk '{a[$1]++}END{for(i in a){print i,a[i]}}'  abc
+
+a[abc]++      a[abc]=2
+a[xyz]++      a[xyz]=1
+
+abc 2
+xyz 1
+
+
+
+ip[192.168.0.1]=2
+ip[192.168.0.2]=1
+ip[192.168.0.3]=3
+
+使用awk统计网站访问量:
+1,yum -y install httpd
+2,systemctl restart httpd     开启服务
+3,使用其他主机访问该网站,多访问几次
+    防火墙需要临时关闭   systemctl stop firewalld
+4, 使用awk对日志分析, sort可以排序, -n对数字排序, -r降序
+awk '{ip[$1]++}END{for(i in ip){print ip[i],i}}' access_log  | sort -nr
+5, 可以使用ab工具测试网站后在交给awk分析(安装httpd之后自动安装ab工具)
+ab -n 10000 -c 1 172.25.0.10/      1个用户访问1万次网站
+
+
+
+#!/bin/bash
+while :
+do
+uptime | awk '{print "cpu平均负载是"$10,$11,$12}'
+ifconfig eth0 | awk '/RX p/{print "网卡接收的数据量 是" $5"字节"}'
+ifconfig eth0 | awk '/TX p/{print "网卡发送的数据量 是" $5"字节"}'
+free -m | awk '/Mem/{print "剩余内存容量是"$4"M"}'
+df -h | awk '/vda1/{print "根分区剩余容量是"$4}'
+user=`cat /etc/passwd | wc -l`
+echo "服务器拥有账户数量是$user个"
+u=`who | wc -l`
+echo "当前服务器登录用户的数量是$u个"
+p=`ps aux | wc -l`
+echo "当前主机运行的进程数量是$p个"
+ins=`rpm -qa |wc -l`
+echo "当前主机安装软件包数量是$ins个"
+sleep 3
+clear
+done
+
+编写脚本,监控服务器,如果发现有人尝试登录失败5次则发邮件给管理员
+
+#!/bin/bash
+x=`awk '/Failed/{ip[$11]++}END{for(i in ip){print ip[i]","i}}' /var/log/secure`
+for i in $x
+do
+	n=${i%,*}
+	p=${i#*,}
+	[ $n -ge 5 ] && echo "$p访问失败了$n次" | mail -s test root
+done
+
+测试前可以先删除邮件
+rm -rf /var/spool/mail/root
+
+
+
+
+
+

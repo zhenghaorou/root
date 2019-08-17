@@ -1,0 +1,141 @@
+网络的功能
+信息传递  资源共享  提高可靠 增加系统处理性能
+
+60年代  分组交换
+70~80  tcp/ip
+90年代   web技术
+
+拓扑结构
+点对点  wan
+星形  lan   
+网状  lan  
+
+osi七层参考模型
+tcp/ip五层参考模型
+
+应用层    
+传输层  防火墙
+网络层  路由器
+数据链路层  交换机
+物理层  网卡
+
+用户视图
+系统视图
+接口视图
+协议视图
+
+交换机工作原理
+学习,广播,转发,更新
+
+广播泛滥
+
+广播域
+vlan  虚拟局域网 
+virtual 
+控制广播
+增加安全
+提高带宽的利用率
+降低数据传递的延迟
+50~60ms   100ms
+20ms
+1s=1000ms
+
+vlan 最大数量4096个
+
+vlan1  默认vlan,无需创建,不能删除
+
+1, 创建vlan
+进入系统视图  
+vlan 2		//创建vlan2
+undo vlan 2   //删除vlan 2
+2, 将接口加入相关vlan  
+in e0/0/3    //进入接口3
+port link-type access    //接口类型更改为接入,表示即将为某一个vlan传输数据
+port default vlan 2   //修改接口服务的vlan
+
+display vlan   查看vlan列表验证之前的操作
+
+vlan batch 10 20 30    
+undo vlan batch 10 20 30
+
+[Huawei]vlan batch 2 3			//创建VLAN2、3
+[Huawei]port-group 1    //建组,组号是1
+[Huawei-port-group-1]group-member Ethernet0/0/3 Ethernet0/0/4    //组中加入3口和4口
+[Huawei-port-group-1]port link-type access   //在组1中所敲的命令,等于对该组中所有接口敲
+[Huawei-port-group-1]port default vlan 2		
+
+网段
+vlan1
+192.168.1.1
+192.168.1.2
+vlan2
+192.168.2.1
+192.168.2.2
+vlan3
+192.168.3.1
+192.168.3.2
+
+
+access 接入链路  承载1个vlan
+trunk  中继链路  承载多个vlan  打vlan标记
+
+in e0/0/7
+port default vlan 1    //恢复默认vlan
+port link-type trunk    //修改为中继链路
+port trunk allow-pass vlan all    //允许通过所有vlan
+
+链路聚合,增加可靠,增加带宽
+
+进入系统视图
+clear configuration interface ethernet0/0/7    //清空所有配置,恢复默认,此时接口会自动关闭
+[Huawei]interface ethernet0/0/7
+undo shutdown     //打开接口
+
+[Huawei]interface Eth-trunk 1   //进入(创建)链路聚合接口1
+[Huawei- Eth-trunk1]trunkport e 0/0/7  0/0/8  //捆绑7口和8口,此步骤如果接口不是默认状态,会提示报错,要求恢复默认.
+port link-type trunk    //将链路聚合接口修改为中继链路
+port trunk allow-pass vlan all    //放行所有vlan
+
+
+网络层	   路由器   ip
+数据链路层  交换机   mac
+
+不同部门=不同vlan=不同网段=不同广播域
+
+2的n次方-2
+
+A  1~127       1677万+
+255.0.0.0
+B  128~191     65534
+255.255.0.0
+C  192~223     254
+255.255.255.0
+
+192.168.0.1~192.168.0.254
+每个网段第一个地址是网络id,最后一个地址是广播地址
+
+192.168.0.1
+
+172.16.0.0     172.16.255.255
+172.16.0.1~172.16.255.254
+
+icmp 英特网控制报文协议  可以查询网络状态并反馈相应数据
+
+undo ip add   进入接口,删除ip
+在接口中使用 display this 查看配置的ip地址
+
+路由表
+直连路由  路由器接口配置ip,并开启之后自动产生
+静态路由  由管理员手工配置,小规模网络适用
+
+R1
+ip route-static 192.168.3.0 24 192.168.2.2
+ip route-static 192.168.4.0 24 192.168.2.2
+
+R2
+undo ip route-static 192.168.1.0 24 192.168.2.3
+ip route-static 192.168.1.0 24 192.168.2.1
+
+display ip routing-table | include /24    查看路由表包含/24的行
+
+

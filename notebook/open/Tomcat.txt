@@ -1,0 +1,107 @@
+常用与搭建web服务器的软件有
+httpd/nginx
+tomcat/weblogic/websphere/jboss
+下面的软件都是运行java网页的,虽然然都可以运行静态网页,但效率很低,所以一般不用于制作静态网页
+java官网:www.Oracle.com
+JDK(java development kit)java软件开发工具包
+
+
+
+###############################################################################################################################
+案例1:安装部署Tomcat服务器
+---部署tomcat---
+1:yum -y install java-1.8.0-openjdk
+2:安装tomcat,它可以直接运行,不用编译安装,但一定要有java解释器
+tar -xf apache-tomcat-8.0.30.tar.gz -C /root
+mv /root/apache-tomcat-8.0.30 /usr/local/tomcat
+3:启动tomcat
+/usr/local/tomcat/bin/startup.sh
+4:测试tomcat动态页面
+firefox 192.168.2.100:8080
+
+tomcat是直接运行的java的软件,不需要安装.
+###############################################################################################################################
+案例2:部署Tomcat虚拟服务器
+---部署虚拟服务器---
+1:修改配置文件/usr/local/tomcat/conf/server.xml
+2:添加虚拟主机,赋值<Host></Host>结构体的内容并修改配置
+3:添加相应虚拟主机的根目录(除了根目录还要有ROOT)
+4:书写不同的静态页面index.html
+5:验证测试
+
+---加密网站---
+1:生成密钥并自动创建文件夹
+keytool -genkeypair -alias tomcat \
+-keyalg RSA -keystore /usr/local/tomcat/keystore
+2:修改conf/server.xml配置文件
+将8443端口的注释去掉,在<Connector />结构体之间加上两句话
+keystoreFile="/usr/local/tomcat/keystore" keystorePass="123456"
+3:重启tomcat
+
+###############################################################################################################################
+bin:主程序目录			conf:配置文件目录
+logs:日志目录			webapps:页面根目录
+lib:库文件目录			temp:临时目录
+work:自动编译目录jsp
+
+catalina日志是核心日志,每天都会更新.
+tomcat的启动速度会被/dev/random影响,因为tomcat要从/dev/random里面取随机数,而随机数会从内存里面取出来,一般8005端口没起来都是因为这个原因
+优化方法:将/dev/random删除或备份,然后再生成/dev/urandom快捷方式(ln -s)
+另外tomcat端口是8080,8005,8009,所以和nginx不会冲突
+java常见压缩格式为.jar和.war,直接将压缩文件放入webapps下即可,tomcat自带解压功能,每次tomcat启动都会将其根目录下的压缩包解压
+jar -cf XXX.war压缩,jar -xf XXX.war解包
+
+tomcat配置文件基本框架,其框架和nginx/httpd有所不同,主要体现在端口位置
+<Server>
+  <Service>
+    <Engine>
+      <Connector port=8080 />
+      <Connector port=8009 />
+      <Host name=localhost appBase= unpackWARs="true" autoDeploy="true">
+      <Context path="" docBase="base"/>
+      </Host>
+    </Engine>
+  </Service>
+</Server>
+虚拟主机在<Host></Host>框架里修改,Hostname是名字,appBase是根目录路径,unpackWARs的意思是如果有war包放入该目录下是否自动解压,autoDeploy的意思是修改配置之后是否自动部署.docBase本来是默认值ROOT,意思为网站的页面根目录在ROOT(不是网站根目录,是页面的根目录)
+Context path是旧的目录,docBase是跳转目录
+
+
+tomcat的配置文件和路径文件都严格区分大小写,比如ROOT一定要全大写
+httpd/nginx和tomcat的端口使用逻辑有所不同.httpd/nginx的虚拟主机会监听一个端口,端口号是写入虚拟主机结构体内,httpd/nginx的加密是针对某个网站的.而tomcat的端口声明位于虚拟主机结构体之外,也就是说tomcat加密端口的时候会把全部网站都加密了
+
+形象的说,httpd/nginx的端口是大厦中的一扇门,这扇门不能到达大厦的每个的房间,而tomcat的端口就像是大厦中的大门,可以达到大厦里面的每一个房间.
+
+tomcat的数据流是:
+Port------>Connector------>Service------>Engine------>Host------>Context path
+这个流向是符合server.xml配置文件的结构
+
+
+httpd/nginx/tomcat三个软件的跳转都可以跳到任意网页
+httpd使用Alias关键字
+nginx使用rewrite关键字
+tomcat使用Context path,docBase关键字
+
+################################################################################
+
+CDN:Content Delivery Network内容分发网络
+核心技术就是代理技术,拓扑为client------proxy------web1
+DNS的分离解析技术也是实现CDN的组成部分,根据不同的用户(IP)解析出不同的IP地址
+
+varnish是代理软件,拥有代理和缓存功能
+当client访问proxy时,先从web1服务器获取网页,然后自身缓存这些内容,当用户再访问proxy时,他会将缓存网页直接发给client,而不必再去web1获取网页,同时,其他client访问同一内容的时候,同样会从proxy缓存里面获取网页内容.所以第一个获取网页的用户获取网页的速度最慢,后面的用户获取速度都会比较快.
+
+CDN技术是边缘计算的核心技术之一,它可以就近给用户提供数据和计算而不必经由中心节点
+
+
+云计算时代,中小型公司可以通过租赁服务器实现CDN
+
+
+
+
+
+
+
+
+
+

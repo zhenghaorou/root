@@ -1,0 +1,204 @@
+Git版本控制
+
+版本库是控制版本的核心
+office word的保存是覆盖原有文件,而git会保存过往版本的信息,类似于word的另存为,但这样会有个很大的问题,就是另存为的文件太多了.
+
+集中subversion(svn):共用一个仓库,需要联网
+分布式git:每个用户都有一个完整克隆,可以断网操作,每个用户都相当于一个服务器
+
+
+################################################################################
+案例1:Git基本操作(web1)
+---安装Git---
+1:yum -y install git
+
+---初始化仓库---
+1:make /var/git/
+2:git init /var/git/project --bare
+3:
+
+---客户端测试(web2)---
+1:git clone root@192.168.2.100:/var/git/project
+2:修改并查看配置
+git config --global user.email "you@example.com"
+git config --global user.name "Your Name"
+cat ~/.gitconfig
+这两条配置是修改你的用户信息,让服务端知道是谁上传下载了文件
+
+
+
+
+
+
+案例4:Git服务器
+1:
+################################################################################
+git常用指令:
+clone:将远程服务器的仓库克隆到本地    git clone root@192.168.2.100:/var/git/project
+
+config:修改git配置        git config --global user.email "you@example.com"
+                      # git config --global user.name "Your Name"
+
+add添加修改到暂存区		git add .
+
+commit提交修改到本地仓库      git commit -m ""   ""里面加文件注释内容
+
+push提交修改到远程服务器      git push 
+
+pull将服务器新更新的资料拿过来(以上次clone/pull为分隔时间点)
+
+本地:工作区,暂存区,本地git仓库
+远程:远程服务器,其他git客户端
+暂存区其实就是缓存(不知道存在内存还是文件里,反正会被删除的)
+隐藏目录是本地仓库,可见目录是工作区
+除了工作区是明文查看的,其他都是无法查看的文件(仓库)
+
+操作流程:
+1:在工作区(也就是可见目录下)创建文件(要cd进去才行)
+2:查看数据状态git status
+
+3:提交工作区文件到暂存区git add .(会自动扫描目录并将修改过的文件放入暂存区)
+
+4:将暂存区修改提交到本地仓库git commit -m "本次修改的说明/注释/备注"
+
+5:将本地仓库的文件提交到远程服务器git push
+
+6:查看git的日志git log,可以加入--pretty=oneline或--oneline选项,更加简洁
+git log --pretty=oneline
+git log --oneline
+7:回滚历史,git reset --hard address,其中address可以通过git reflog查看
+
+git reflog是查看指针移动历史的命令,可以结合git reset --hard address使用
+git reflog
+PS:首次操作的过程中会出现两次提示,一次是add到时候,一次是push的时候,按提示完成即可.
+
+git删除文件的更新操作要加上-A/--all/--ignore-removel
+
+git branch命令是创建分支的命令,他会根据指针的位置创建分支　　//　　-a 查看所有分之名字　　-v 查看所有分之和版本
+
+git checkout命令是切换分支的命令
+
+决定分支最后的内容是commit时指针放在哪里,而不是在工作区的时候,所以在分支做修改一定要记得commit内容,不然切换了分支就相当于没做.
+
+
+分支名称规范:
+MASTER分支:主分支,代码核心
+DEVELOP分支:最新开发成果的分支
+REKEASE分支:为发布新产品设置的分支
+HOTFIX分支:为了修复软件BUG缺陷的分支
+FEATURE分支:为了开发新功能的分支
+
+git管理是运维业务逻辑的重要技能,它是整个公司整体开发上线速度的保障.
+
+Git服务器可以用三种协议搭建:
+ssh协议:git clone root@192.168.2.100/
+Git协议:git clone git://192.168.2.100/
+http协议:firefox http://192.168.2.100/
+
+
+
+ssh-keygen -f /root/.ssh/id_rsa -N ''
+非交互式生成密钥,-f是存放路径,''表示密码为空
+
+
+HEAD指针操作
+查看Git版本信息
+移动指针
+通过移动HEAD指针恢复数据
+移动HEAD指针，将数据还原到任意版本。
+提示：当前HEAD指针为HEAD@{0}。
+root@web2 project]# git reset --hard 301c0
+[root@web2 project]# git reflog
+301c090 HEAD@{0}: reset: moving to 301c0
+04ddc0f HEAD@{1}: commit: num.txt:789
+7bba57b HEAD@{2}: commit: num.txt:456
+301c090 HEAD@{3}: commit: num.txt:123
+b427164 HEAD@{5}: commit: new.txt:third
+0584949 HEAD@{6}: commit: new.txt:second
+ece2dfd HEAD@{7}: commit: new.txt:first line
+e1112ac HEAD@{8}: commit: add new.txt
+1a0d908 HEAD@{9}: commit (initial): 初始化
+[root@web2 project]# cat num.txt                #查看文件是否为123
+123
+[root@web2 project]# git reset --hard 7bba57b
+[root@web2 project]# cat num.txt                #查看文件是否为123，456
+123
+456
+[root@web2 project]# git reflog                #查看指针移动历史
+7bba57b HEAD@{0}: reset: moving to 7bba57b
+301c090 HEAD@{1}: reset: moving to 301c0
+… …
+[root@web2 project]# git reset --hard 04ddc0f    #恢复num.txt的所有数据
+
+模拟误删后的数据还原操作
+root@web2 project]# git rm init.txt                    #删除文件
+rm 'init.txt'
+[root@web2 project]# git commit -m "delete init.txt"    #提交本地仓库
+[root@web2 project]# git reflog                        #查看版本历史
+0dc2b76 HEAD@{0}: commit: delete init.txt
+7bba57b HEAD@{0}: reset: moving to 7bba57b
+301c090 HEAD@{1}: reset: moving to 301c0
+… …
+[root@web2 project]# git reset --hard 04ddc0f            #恢复数据
+[root@web2 project]# ls
+demo  init.txt  new.txt  num.txt
+
+##############################################################################################
+
+4.2 方案
+
+Git支持很多服务器协议形式，不同协议的Git服务器，客户端就可以使用不同的形式访问服务器。创建的服务器协议有SSH协议、Git协议、HTTP协议。
+步骤一：SSH协议服务器（支持读写操作）
+
+1）创建基于密码验证的SSH协议服务器（web1主机操作）。
+[root@web1 ~]# git init --bare /var/git/base_ssh
+Initialized empty Git repository in /var/git/base_ssh/
+2)客户端访问的方式（web2主机操作）。
+[root@web2 ~]# git clone root@192.168.2.100:/var/git/base_ssh
+[root@web2 ~]# rm -rf base_ssh
+3）客户端生成SSH密钥，实现免密码登陆git服务器（web2主机操作）。
+[root@web2 ~]# ssh-keygen -f /root/.ssh/id_rsa -N ''
+[root@web2 ~]# ssh-copy-id  192.168.2.100
+[root@web2 ~]# git clone root@192.168.2.100:/var/git/base_ssh
+[root@web2 ~]# git push
+
+
+步骤二：Git协议服务器（只读操作的服务器）
+安装git-daemon软件包（web1主机操作）。
+[root@web1 ~]# yum -y install git-daemon
+2）创建版本库（web1主机操作）。
+[root@web1 ~]# git init --bare /var/git/base_git
+Initialized empty Git repository in /var/git/base_git/
+3）修改配置文件，启动git服务（web1主机操作）。
+[root@web1 ~]# vim /usr/lib/systemd/system/git@.service
+修改前内容如下：
+ExecStart=-/usr/libexec/git-core/git-daemon --base-path=/var/lib/git 
+--export-all --user-path=public_git --syslog --inetd –verbose
+修改后内容如下：
+ExecStart=-/usr/libexec/git-core/git-daemon --base-path=/var/git 
+--export-all --user-path=public_git --syslog --inetd –verbose
+[root@web1 ~]# systemctl  start  git.socket
+4）客户端访问方式（web2主机操作）
+ git clone git://192.168.2.100/base_git
+
+
+步骤三：HTTP协议服务器（只读操作的服务器）
+
+1）安装gitweb、httpd软件包（web1主机操作）。
+[root@web1 ~]# yum -y install httpd gitweb
+2）修改配置文件，设置仓库根目录（web1主机操作）。
+[root@web1 ~]# vim +11 /etc/gitweb.conf 
+$projectroot = "/var/git";                        #添加一行
+3) 创建版本仓库（web1主机操作）
+[root@web1 ~]# git init --bare /var/git/base_http
+4）启动httpd服务器
+[root@web1 ~]# systemctl start httpd
+5）客户端访问方式（web2主机操作）
+
+root@web2 ~]# firefox http://192.168.2.100/git/
+
+
+
+
+
+

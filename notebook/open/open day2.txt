@@ -1,0 +1,289 @@
+nginx[静态页面，动态页面]
+静态网页：pdf,doc,jpg,mp3,mp4,txt,html........
+动态网页：shell,php,java,python,perl,ruby............
+LAMP(阿帕奇)
+LNMP（Linux、Nginx、MySQL、PHP）
+在RHEL7系统中，源码安装Nginx，使用RPM包安装MariaDB、PHP、PHP-FPM软件。
+操作过程中需要安装的软件列表如下：
+nginx
+mariadb、mariadb-server、mariadb-devel
+php、php-fpm、php-mysql
+
+安装MariaDB
+ yum -y install   mariadb   mariadb-server   mariadb-devel
+
+php和php-fpm
+php解释器 php-mysql扩展包　　　　
+[root@proxy ~]# yum -y  install  php   php-mysql
+[root@proxy ~]# yum -y  install  php-fpm　　//(服务)
+
+
+查看php-fpm配置文件（实验中不需要修改该文件
+[root@proxy etc]# vim /etc/php-fpm.d/www.conf
+[www]
+listen = 127.0.0.1:9000            //PHP端口号
+pm.max_children = 32                //最大进程数量
+pm.start_servers = 15                //最小进程数量
+pm.min_spare_servers = 5            //最少需要几个空闲着的进程
+pm.max_spare_servers = 32            //最多允许几个进程处于空闲状态
+
+
+
+
+
+
+
+###########################################################################################################
+nginx (动静分离)
+如果用户访问静态页面，则直接返回
+如果用户访问动态．则转发给9000．执行脚本后返回
+location可以匹配用户的地址栏（从/开始）
+
+[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+location / {
+            root   html;
+            index  index.php  index.html   index.htm;
+#设置默认首页为index.php，当用户在浏览器地址栏中只写域名或IP，不说访问什么页面时，服务器会把默认首页index.php返回给用户
+        }
+ location  ~  \.php$  {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;    #将请求转发给本机9000端口，PHP解释器
+            fastcgi_index  index.php;
+            #fastcgi_param   SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            include        fastcgi.conf;       #加载其他配置文件  (里面放了变量）
+        }
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload
+#请先确保nginx是启动状态，否则运行该命令会报错,报错信息如下：
+#[error] open() "/usr/local/nginx/logs/nginx.pid" failed (2: No such file or directory)
+配置文件::location ~ \.php$ {         //脚本点缀结尾
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;    //phpfpm服务的端口
+            fastcgi_index  index.php;
+           # fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi.conf;
+        }
+
+安全的ｗｅｂ动静分离
+server {
+        listen       443 ssl;
+        server_name  www.a.com;
+
+auth_basic "input Password:";
+     auth_basic_user_file "/usr/local/nginx/pass";
+        ssl_certificate      cert.pem;
+        ssl_certificate_key  cert.key;
+
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+
+        location / {
+            root   html;
+            index index.php  index.html index.htm;
+        }
+location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+           # fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi.conf;
+        }
+
+    }
+
+
+#############################################################################################################
+测试PHP页面
+1）创建PHP测试页面1，可以参考lnmp_soft/php_scripts/mysql.php
+   创建PHP测试页面,连接并查询MariaDB数据库
+[root@proxy ~]# vim /usr/local/nginx/html/mysql.php
+<?php
+$mysqli = new mysqli('localhost','root','密码','mysql');
+//注意：root为mysql数据库的账户名称，密码需要修改为实际mysql密码，无密码则留空即可
+//localhost是数据库的域名或IP，mysql是数据库的名称
+if (mysqli_connect_errno()){
+    die('Unable to connect!'). mysqli_connect_error();
+}
+$sql = "select * from user";
+$result = $mysqli->query($sql);
+while($row = $result->fetch_array()){
+    printf("Host:%s",$row[0]);
+    printf("</br>");
+    printf("Name:%s",$row[1]);
+    printf("</br>");
+}
+?>
+
+
+grant all on *.* to '用户'@'主机' identified by '密码';
+(这是一个PHP脚本)每当mysql.user表多一个用户网页就会刷新一条信息.
+测试页面
+firefox https://www.a.com/mysql.php
+firefox www.a.com.mysql.php
+LNMP常见问题
+Nginx的默认访问日志文件为/usr/local/nginx/logs/access.log
+Nginx的默认错误日志文件为/usr/local/nginx/logs/error.log
+PHP默认错误日志文件为/var/log/php-fpm/www-error.log
+如果动态网站访问失败，可用参考错误日志，查找错误信息。
+
+########################################################################################################
+地址重写（地址跳转）
+关于Nginx服务器的地址重写，主要用到的配置参数是rewrite：
+rewrite regex replacement flag
+rewrite 旧地址 新地址 [选项]
+
+rewrite /旧地址   /新地址                     #根往后写
+
+例子：
+server {
+        listen       80;
+        server_name  www.a.com;
+rewrite /a.html  /b.html redirect；(跳转栏地址)
+
+firefox www.a.com/a.html 会跳转到　www.a.com/b.html
+案例三
+
+rewrite ^/  http://www.tmooc.cn/;
+用真机访问
+firefox http://192.168.4.5 #些什么都会跳转到　tmooc
+案例四
+
+server {
+        listen       80;
+        server_name  localhost;
+rewrite ^/(.*)  http://www.tmooc.cn/$1;　　　＃^/以根后面（.*）保留=$1
+
+案例五
+修改配置文件(实现curl和火狐访问相同链接返回的页面不同)
+echo "I am Normal page" > /usr/local/nginx/html/test.html
+# mkdir  -p  /usr/local/nginx/html/firefox/
+# echo "firefox page" > /usr/local/nginx/html/firefox/test.html
+准备文件
+
+#log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+ls /usr/local/nginx/logs ，cat /usr/local/nginx/logs/access.log 查看访问信息:
+＂$http_user_agent　＃这里是用户信息　　电脑系统版本　浏览器的类型和版本＂
+修改配置文件
+
+server {
+        listen       80;
+        server_name  www.a.com;
+if ($http_user_agent ~* firefox ) {                      #这里，~符号代表正则匹配，*符号代表不区分大小写
+ rewrite ^/(.*)  /firefox/$1;        //识别客户端firefox浏览器
+
+}
+#auth_basic "input password";
+#auth_basic_user_file "/usr/local/nginx/pass";
+        charset utf8;
+#rewrite ^/(.*)   http://www.tmooc.cn/$1  redirect;
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;
+            index index.php  index.html index.htm;
+        }
+
+
+测试
+root@client ~]# firefox  http://192.168.4.5/test.html
+[root@client ~]# curl     http://192.168.4.5/test.html
+
+
+5）地址重写格式【总结】
+rewrite 旧地址 新地址 [选项];
+last 不再读其他rewrite
+break 不再读其他语句，结束请求
+redirect 临时重定向
+permament 永久重定向
+##################################################################################################################
+
+1.www.a.com 做地址跳转
+b做动静分离(安全ｗｅｂ)
+a:
+server {
+        listen       80;
+        server_name  www.a.com;
+if ($http_user_agent ~* firefox ) {
+ rewrite ^/(.*)  /firefox/$1 redirect;
+
+}
+
+charset utf8;
+location / {
+            root   html;
+            index index.php  index.html index.htm;
+        }
+location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+           # fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi.conf;
+        }
+}
+}
+
+b:
+server {
+        listen       80;
+     auth_basic "input Password:";
+     auth_basic_user_file "/usr/local/nginx/pass";
+        server_name  www.b.com;
+
+charset utf8;
+        location / {
+            root   www;
+            index index.php  index.html index.htm;
+location ~ \.php$ {
+            root           www;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+           # fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi.conf;
+
+        }
+    }
+
+}
+
+
+server {
+       listen       443 ssl;
+       server_name  www.b.com;
+
+auth_basic "input Password:";
+    auth_basic_user_file "/usr/local/nginx/pass";
+       ssl_certificate      cert.pem;
+       ssl_certificate_key  cert.key;
+
+       ssl_session_cache    shared:SSL:1m;
+       ssl_session_timeout  5m;
+
+       ssl_ciphers  HIGH:!aNULL:!MD5;
+       ssl_prefer_server_ciphers  on;
+
+       location / {
+           root   www;
+           index index.php  index.html index.htm;
+
+       }
+location ~ \.php$ {
+           root           www;
+           fastcgi_pass   127.0.0.1:9000;
+           fastcgi_index  index.php;
+           fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+           include        fastcgi.conf;
+       }
+
+   }
+}
+
+
+
+
+
+

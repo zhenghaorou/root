@@ -1,0 +1,167 @@
+正则表达式
+基本正则
+^    $    [  ]   [^]   .   *   
+\{n,m\}   \{n,\}    \(ro\)\{2\}   \(\)  
+扩展正则
+egrep
+grep -E
++     ?     {n,m}    |   ()    
+
+\b
+
+ athey
+
+\bthe\b
+
+
+前置指令 |  sed 选项  定址符 指令 
+sed 选项  定址符 指令    文件
+逐行执行
+-n  -r   -i   
+/ /p   / /d   /  /s///
+
+a 在行下面追加    i 在行上面添加    c替换整行
+
+sed 'a 666' user      //所有行下面追加666
+sed '1a 666' user     //第1行下面追加666
+sed '/bash$/a 666' user    //以bash结尾的行下面追加666
+sed 'i 666' user     //所有行上面添加666
+sed '1i 666' user     //第1行上面添加666
+
+sed '2c 666' user    //将第2行替换为666
+sed 'c 666' user    //将所有行替换为666
+
+
+sed  修改文本
+awk  精确定位查找  逐行执行
+
+前置指令 |  awk 选项  条件 指令 
+awk 选项  条件 指令     文件
+
+选项
+-F  指定分隔符
+指令
+print  输出内容到屏幕
+
+列  $1 第一列        $2 第二列
+
+awk '{print}' hello    //输出文档所有内容
+awk '{print $2}' hello    //输出文档每行第2列
+awk '{print $2 , $3}' hello   //输出文档每行第2列和第3列
+awk '{print $3,$2}' hello 
+awk '{print $1,$2,$3}' hello 
+awk '{print $0}' hello     //输出文档每行所有列
+awk '{print $0,$3}' hello   //输出文档每行所有列和第3列
+
+awk -F: '{print $6}' user   //修改分隔符为冒号,显示第6列
+
+awk -F[:/] '{print $9}' user   //修改分隔符为冒号或者斜杠,显示第9列
+awk -Fo '{print $2}' hello    //修改分隔符为字母o,显示第2列
+
+awk 常用内置变量
+$0所有列    $1 $2 $3...  NR 行号    NF 列号
+
+awk '{print NR}' hello     //查看行号
+awk '{print NF}' hello      //查看有几列
+awk '{print NR,NF}' hello    //查看行号和列
+awk -Fbin/ '{print $2}'  user    //定义分隔符为bin/,显示第2列
+df -h / | awk '{print $4}'   //显示所有行第4列
+df -h / | awk '/vda1/{print $4}'   //显示有vda1的行的第4列
+df -h / | awk '/vda1/{print "根分区剩余容量是:"$4}'   //显示有vda1的行的第4列,并在前面追加常量, 常量要用双引号
+
+使用awk过滤显示网卡流量信息:
+ifconfig eth0 |awk '/RX p/{print $5}'
+
+ifconfig eth0 |awk '/RX p/{print "eth0网卡接收的流量是" $5"字节"}'
+ifconfig eth0 |awk '/TX p/{print "eth0网卡发送的流量是" $5"字节"}'
+
+使用awk筛选安全日志中登录密码输错的主机
+
+1,在desktop中输入tail -5 /var/log/secure 可以查看安全日志最新的5行记录
+2,使用server远程登录desktop,故意输错密码,然后再次查看desktop日志发现最后一行多出记录了
+3,使用真机远程登录desktop,也故意输入错误密码(需要提前在desktop中家目录的.ssh中把认证秘钥文件改名)
+
+4,在desktop中使用命令过滤日志,查找密码输入失败的行的第11列
+awk '/Failed/{print $11}' /var/log/secure
+
+使用awk筛选输出用户相应信息
+XXX的解释器路径是XXXX,家目录是XXXX
+awk -F: '{print $1,"的解释器路径是"$7}' user 
+
+控制awk的工作流程
+BEGIN{???}   执行1次
+{print}		 执行n次
+END{???}     执行1次
+
+制表符   \t   tab键
+
+使用awk按流程输出信息:
+awk -F: 'BEGIN{print "User\tUID\tHome"}{print $1"\t"$3"\t"$6}END{print "总计 "NR" 行"}' user 
+
+
+ awk处理条件
+1,   正则     ~ 包含    !~不包含
+
+awk -F: '$1~/root/{print}' user     //找第1列包含root的行
+awk -F: '/bin/' user        //找有bin的行
+awk -F: '$6~/bin/' user      //找第6列包含bin的行
+
+awk -F: '$6~/\/bin/' user    //找第6列包含/bin的行
+awk -F: '$6!~/\/bin/' user   //找第6列不包含/bin的行
+
+2,使用数值/字符串比较设置条件
+比较符号：==(等于) !=（不等于） >（大于）
+>=（大于等于） <（小于） <=（小于等于）
+
+awk -F: '$1=="root"' user   //找第1列等于root的行
+awk -F: '$1=="roo"' user   //找第1列等于roo的行
+awk -F: '$1~/roo/' user    //找第1列包含roo的行
+awk -F: 'NR==3' user     //找第3行
+
+awk -F: '$3==0' /etc/passwd   //找管理员
+awk -F: '$3<10' /etc/passwd   //找uid小于10的账户
+awk -F: '$3<10{print $1}' /etc/passwd   //找uid小于10的账户,并显示账户名
+awk -F: '$3>=1000{print $1}' /etc/passwd   //找普通账户,并显示账户名
+
+3,逻辑符号
+&&  并且 
+||     或者
+
+awk 'NR>=3 && NR<=5' user    //找3~5行
+awk -F: '$3>=100 && $3<=1000' /etc/passwd    //找udi大于等于100,并且小于等于1000的行
+awk 'NR>3 && NR<5' user     //找大于3且小于5的行
+awk 'NR>3 || NR<5' user    //找大于3或者小于5的行
+awk 'NR>5 && NR<3' user    //找大于5且小于3的行,逻辑错误
+
+
+awk中数学运算
+awk 'BEGIN{x=10;y=20;print x*y}'  //定义变量,然后相乘并输出结果
+awk 'BEGIN{x=10;y=20;print y%x}'   //取余
+awk 'BEGIN{x=10;y=20;print x+=y}'  //x的自增, 支持主流写法
+awk 'BEGIN{x=10;y=20;print x++}'   //将x+1,但不输出
+awk 'BEGIN{x=10;y=20;print x++;print x}'   //将x+1,然后输出x
+awk 'BEGIN{x=10;y=20;print x+=1}'  //将x+1,同时输出
+
+seq 20 | awk '$1%3==0'    //找1~20以内谁是3的倍数
+
+
+
+使用awk按照 用户名 --> 密码 的格式输出使用bash的账户信息
+
+#!/bin/bash
+u=`awk -F: '/bash$/{print $1}' /etc/passwd`
+for i in $u
+do
+grep $i: /etc/shadow | awk -F: '{print $1" --> " $2}'
+done
+
+
+
+
+
+
+
+
+
+
+

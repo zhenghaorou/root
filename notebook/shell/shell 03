@@ -1,0 +1,249 @@
+条件测试
+test 测试内容        [  测试内容  ]
+1,字符串
+==  !=   -z    ! -z
+2,数字
+-eq  -ne  -gt  -ge   -lt  -le
+3,文件
+-e   -f   -d    -r   -w   -x
+4,逻辑
+&&   ||    ;
+
+单分支
+if 条件测试;then
+	命令序列
+fi
+双分支
+if 条件测试;then
+	命令序列1
+else
+	命令序列2
+fi
+多分支
+if 条件测试;then
+	命令序列1
+elif 条件测试;then
+	命令序列2
+else
+	命令序列3
+fi
+
+循环
+for 变量名  in  值1  值2 值3...
+do
+	执行指令
+done
+
+while 条件测试
+do
+	执行指令
+done
+
+case分支,功能类似if,代码比if要精简,但功能没有if强大,是简化版本的if
+
+case  变量  in
+模式1)
+    命令序列1 ;;
+模式2)
+    命令序列2 ;;
+    .. ..
+*)
+    默认命令序列
+esac
+
+在真机操作
+cd /linux-soft/02
+scp lnmp_soft.tar.gz root@172.25.0.10:/
+回到虚拟机
+cd /
+tar xf /lnmp_soft.tar.gz
+cd /lnmp_soft
+scp nginx-1.10.3.tar.gz /opt
+
+编写脚本,实现一键源代码编译安装nginx服务  
+#!/bin/bash
+tar xf nginx-1.10.3.tar.gz
+cd nginx-1.10.3
+yum -y install gcc openssl-devel pcre-devel &> /dev/null
+./configure
+make
+make install
+
+systemctl stop firewalld  //关闭防火墙
+cd /usr/local/nginx   //最后进到这个目录测试软件是否已经安装
+/usr/local/nginx/sbin/nginx    //开启服务
+/usr/local/nginx/sbin/nginx -s stop   //关闭服务
+netstat -ntulp | grep nginx    //查询nginx服务状态
+netstat -ntulp | grep :80    //查询80端口被哪个服务占用
+
+
+shell函数,相当于增强版别名,可以利用一个函数名称,存储多个命令
+
+方法一
+abc(){
+> echo 123
+> ls
+> }
+调用函数,直接输abc即可
+方法二
+function xyz {
+> echo xyz
+> ls
+> }
+
+
+#!/bin/bash
+cecho(){
+echo -e "\033[$1m$2\033[0m"
+}
+cecho 31 ABCDEF
+cecho 32 ABCDEF
+cecho 33 ABCDEF
+cecho 34 ABCDEF
+cecho 35 ABCDEF
+cecho 36 ABCDEF
+
+while :
+do
+	exit
+	
+done
+echo XXXXX
+
+对循环的控制
+1, exit    直接退出脚本
+2, break   终止循环,继续循环之后的任务
+3, continue   终止当前循环,继续下一次循环
+
+编写脚本,使用户输入的数字求和,用户输入0时,结束计算并输出之前所有数字之和
+#!/bin/bash
+x=0
+while :
+do
+	read -p "请输入一个数字"  n
+	[ $n -eq 0 ] && break
+	let x+=n
+done
+echo $x
+
+从数字1~20中查找6的倍数,找到之后输出到屏幕
+
+#!/bin/bash
+for i in {1..20}
+do
+	x=$[i%6]
+	[ $x -ne 0 ]  && continue
+	echo $i 
+done
+
+
+字符串
+
+1,字串截取
+a=abcdef     //定义变量
+
+echo ${a:1:2}    //从第2位开始截取2位
+echo ${a:4:2}    //从第5位开始截取2位
+echo ${a:2:4}    
+echo ${a:0:3}    //从第1位开始截取3位
+echo ${a::3}     //效果同上
+
+编写脚本,从所有的字母大写,小写,数字中找一个随机字符显示在屏幕
+
+编写脚本, 获取8位随机字符的密码
+#!/bin/bash
+x=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+pass=
+for i in {1..8}
+do
+n=$[RANDOM%62]
+pass1=${x:n:1}
+pass=$pass$pass1
+done
+echo $pass
+
+
+2,字串替换
+a=11223344
+echo ${a/1/X}     //将第一个1替换成X
+echo ${a//1/X}    //将所有1替换成X
+echo ${a/2/}     //将第一个2替换成空,等于删除第一个2
+echo ${a//2/}    //将所有2替换成空,删除所有2
+
+a=222333
+如何得到替换结果   XX2333
+
+3,字串删除
+#    从左至右删除   掐头
+a=`head -1 /etc/passwd`
+echo ${a#root}     //从左至右删除第一个root
+echo ${a#root:x:}  //从左至右删除到root:x:
+
+echo ${a#root:x:0:0:root:/root}  //从左至右删除到root:x:0:0:root:/root
+
+echo ${a##*root}  //上述目的可以简写, 删除到最后一个root,以及root左边所有内容
+
+从右往左删除   去尾
+echo ${a%/bin/bash}    //从右往左删除到/bin/bash
+echo ${a%root*}		//从右往左删除到第一个root,以及root右边所有内容
+echo ${a%%root*}   //从右往左删除到最后一个root,以及root右边所有内容,相当于删除整行
+
+通过字串删除功能,编写脚本,实现批量修改文件扩展名
+touch abc{1..8}.txt     //先制作素材
+
+#!/bin/bash
+for i in  `ls *.txt`
+do
+	x=${i%.*}		//通过去尾功能,获取没有扩展名的文件名
+	mv $i  $x.doc   //将原来的文件,修改为文件名.doc
+done
+
+升级版
+#!/bin/bash
+for i in  `ls *.$1`   //使用位置变量
+do
+	x=${i%.*}		
+	mv $i  $x.$2   
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

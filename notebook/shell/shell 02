@@ -1,0 +1,232 @@
+规范的脚本格式
+1,声明解释器
+2,注释
+3,代码
+
+变量的种类
+1,自定义  
+2,环境 USER UID HOME HOSTNAME SHELL PWD PATH PS1 PS2
+3,位置  $1 $2 $3....
+4,预定义 $$ $* $# $? $0
+
+""   ''   ``  $( )
+read -p "XXXX" 变量名
+stty -echo
+stty echo
+局部  -->  全局  export
+
+expr 1 + 1
+expr 1 \* 1
+echo $[1+1]
+echo $[1*1]
+echo $((1+1))
+
+let c=1+1
+let c=x+y
+
+a=10
+
+let a++
+let a--
+let a+=2
+
+bc   //计算器,可以计算小数
+1.1+1
+10/3
+scale=3    //定义小数点后位数
+10/3
+quit     //退出
+
+非交互式计算
+echo "1.1+1" | bc
+echo "10/3" | bc
+echo "scale=3;10/3" | bc
+
+
+useradd 
+
+
+条件测试  [   ]     test       //能够使脚本更智能的工具
+1,字符串
+== 判断是否相等      !=  判断是否不相等
+-z  判断是否为空   !  -z
+[ a == b ] 或者  test a == b      //判断a是否等于b
+echo $?      //0是判断成功,非0是失败
+[ a == a ]
+echo $?
+[ a != a ]      //判断a是否不等于a
+echo $?
+[ $USER == root ]   //判断当前用户是否为root
+echo $?
+
+a=10
+[ -z $a ]   //判断变量a是否为空
+echo $?    //如果不是空,返回值是非0
+a=			//a等于空
+[ -z $a ]   
+echo $?     //判断结果为0
+
+2,数字
+-eq  等于
+-ne  不等于
+-gt  大于
+-ge  大于等于
+-lt  小于
+-le  小于等于
+
+X=20  		//定义一个测试变量
+[ $X -eq 20 ] && echo "相等" || echo "不相等"
+相等
+ [ $X -ne 30 ] && echo "不等于" || echo "等于"
+不等于
+[ $X -gt 20 ] && echo "大于" || echo "否"
+否
+[ $X -ge 10 ] && echo "大于或等于" || echo "否"
+大于或等于
+ [ $X -lt 30 ] && echo "小于" || echo "否"
+小于
+[ $X -le 20 ] && echo "小于或等于" || echo "否"
+小于或等于
+
+3,文件 , 
+-e   判断文件是否存在,不关心文件类型
+-f   判断文件是否存在,且类型必须是普通文件
+-d   判断文件是否存在,且类型必须是目录
+判断当前用户是否拥有相关权限: 
+-r   是否有读 对管理员判断无效
+-w   是否有写 对管理员判断无效
+-x   是否能执行
+
+4,逻辑判断
+&&   并且   之前任务成功,才执行之后任务 
+||    或者     之前任务失败,才执行之后任务
+;    前后无逻辑关系, 执行完前面任务,继续执行后面的
+
+[ a == a ] && echo ok || echo no
+[ a == b ] && echo ok || echo no
+[ a == b ] || echo ok && echo no
+[ a == b ] || echo ok || echo no
+[ a == b ] && echo ok && echo no
+
+[ -z $1 ] && echo no && exit
+
+
+编写脚本实现以下需求:
+每隔2分钟检查登录服务器的账户,如果超过3人,则发邮件给管理员报警
+
+非交互式发邮件的两种方法
+echo 123 |mail -s test root
+mail -s test root < a.txt    //输入重定向,需要先准备好a.txt
+
+#!/bin/bash
+n=`who |wc -l`
+[ $n -gt 3 ] && echo "有$n个人入侵服务器啦!隔壁老王来啦" | mail -s test root
+
+chmod u+x test1.sh
+crontab -e
+*/2 * * * *  /opt/test1.sh
+
+rm -rf /var/spool/mail/root   //测试前可以先删除所有邮件
+
+==   !=   -z   ! -z
+
+&&   ||  
+
+
+
+挂载本地yum源文件  &&  编写yum仓库文件  && 安装ftp服务  &&  开启ftp服务  && 
+
+
+if 单分支
+
+if 条件测试 ;then
+	命令序列
+fi
+
+
+if 双分支
+
+if 条件测试 ;then
+	命令序列1
+else
+	命令序列2
+fi
+
+if 多分支 
+
+#!/bin/bash
+x=$[RANDOM%10]
+read -p "请输入一个数字(0-9)"  n
+if [ $x -eq $n ] ;then
+	echo "恭喜猜对了"
+elif [ $n -gt $x ] ;then
+	echo "猜大了"
+else
+	echo "猜小了"
+fi
+
+ping  -c 定义ping次数   -i 定义ping间隔时间,单位秒   -W 1 加快反馈时间,单位秒
+
+$?
+
+测试一个ip地址,如果成功则返回"ok",如果失败返回"no"
+
+for 循环 ,关心2个点
+1, 循环次数
+2, 循环过程中调用的变量
+
+for 变量名 in 值1 值2 值3......
+do
+	循环任务
+done
+
+for i in a b c
+do
+	echo $i
+done
+
+#!/bin/bash
+for i in {1..5}     //花括号里不能放变量再交给for循环
+do
+        echo $i
+done
+
+#!/bin/bash
+a=5
+for i in `seq $a`   //seq可以使用变量
+do
+        echo $i
+done
+
+编写脚本,测试172.25.0.1~172.25.0.15是否能ping通
+
+#!/bin/bash
+x=0
+y=0
+for i in {1..15}
+do
+	ping -c 3 -i 0.2 -W 1 172.25.0.$i  &> /dev/null
+	if [ $? -eq 0 ];then
+		echo "172.25.0.$i 通了"
+		let x++
+	else
+		echo "172.25.0.$i 不通"
+		let y++
+	fi
+done
+echo "$x台通了,$y台不通"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

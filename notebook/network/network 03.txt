@@ -1,0 +1,133 @@
+交换机   二层
+vlan
+控制广播,增加安全,带宽利用率提高,降低数据传递的延迟
+
+路由器 实现不同网段的链接 ,在物理接口配置ip
+
+三层交换机=二层交换+三层路由 ,在虚拟接口配置ip
+使用三层交换机搭建网络:
+
+1,三层交换机创建vlan 2 3
+   vlan batch 2 3
+2,将接口加入对应vlan
+in g0/0/2
+port link-type access
+port default vlan 2
+dis vlan
+3,进入vlan接口(虚拟接口)配置ip地址,此ip将作为
+终端设备的网关
+in vlan 1
+ip add 192.168.1.254 24
+
+dis cur
+
+添加S3700交换机, 达到更合理利用三层交换机的目的
+
+1,在S3700创建vlan2 3
+2,在S3700将pc所链接的接口加入相应vlan
+3,将2台交换机之间的链路配置为中继链路
+port link-type trunk
+port trunk allow-pass vlan all
+
+排错
+1,查ip,网关
+2,所属vlan
+3,测试与网关的链接
+
+网段 , vlan
+
+为三层交换机接口配置ip的思路:
+
+1,S5700创建vlan4
+2,进入vlan4虚拟接口配置ip
+in vlan 4
+ip add 192.168.4.1 24
+3,将g0/0/2口加入vlan4
+
+动态路由 是由某种动态路由协议实现全网互通的目的,适用于大型网络
+
+rip,isis,eigrp,bgp,ospf
+
+宣告 
+
+
+三层交换机配置:
+ospf		//开启动态路由ospf
+area 0      //进入第一个区域,一般超大型网络才需要多个区域,中小规模只使用第一个也就是0区域即可
+network 192.168.1.0 0.0.0.255   //宣告设备自身所链接的网段
+network 192.168.2.0 0.0.0.255
+network 192.168.3.0 0.0.0.255
+network 192.168.4.0 0.0.0.255
+路由器:
+ospf
+area 0 
+network 192.168.4.0 0.0.0.255
+network 192.168.5.0 0.0.0.255
+display ip routing-table | include /24    查看最终结果
+
+
+直连路由 配置ip,并开启接口自动生成
+静态路由 手工配置   192.168.1.0 24 192.168.1.X
+动态路由
+默认路由 是特殊的静态路由,能够匹配任意网段,当路由表中无法查询到目标网段时使用,通常用在内部设备访问公网时使用.
+
+三层交换机
+ip route-static 0.0.0.0 0 192.168.4.2    //可以匹配任意网络
+路由器
+ip route-static 0.0.0.0 0 192.168.5.1
+
+
+
+传输层     端口号  端到端
+网络层         路由器  ip  点到点
+数据链路层  交换机 vlan trunk  mac
+
+http  80    tcp
+https 443
+
+mysql  3306 tcp
+
+tcp   传输控制协议
+可靠性高,效率低,面向链接
+
+syn 打算与对方建立链接
+ack 确认
+fin 打算与对方断开链接
+
+三次握手  syn-->ack,syn-->ack
+四次断开  fin-->ack-->   fin-->ack
+
+udp   用户数据报协议
+可靠性低,效率高,无链接
+
+acl  访问控制列表,对匹配的数据进行限制.
+
+基本acl  2000~2999   可以对源ip限制
+高级acl  3000~3999   可以对源ip,目标ip,协议,端口限制
+
+acl练习1:
+[Huawei]interface GigabitEthernet 0/0/0
+[Huawei-GigabitEthernet0/0/0] ip address  192.168.1.254 24
+[Huawei]acl 2000   //创建acl,列表号是2000,表示即将使用基本acl
+[Huawei-acl-basic-2000]rule deny source 192.168.2.1 0   //创建规则,拒绝源ip是192.168.2.1的数据通过
+[Huawei]interface GigabitEthernet 0/0/1
+[Huawei-GigabitEthernet0/0/1]ip address  192.168.2.254 24
+[Huawei-GigabitEthernet0/0/1]traffic-filter inbound acl 2000
+   //进入g0/0/1接口后,放置acl 2000,用来过滤即将进入路由器的数据.
+
+acl练习2:
+acl 2000    //重新进入列表2000
+display this   //查看
+undo rule 5   //删除之前的条目,根据序号删除
+rule permit source 192.168.2.1 0   //创建新条目,允许2.1通过
+rule deny   //拒绝所有人通过
+
+在同接口的同方向,只能放一条acl
+
+
+
+
+
+
+
+

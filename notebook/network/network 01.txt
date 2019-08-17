@@ -1,0 +1,88 @@
+网络的功能
+信息传递,资源共享,提高可靠性,增加系统处理性能
+
+60年代   分组交换 提高传输效率
+70~80年代   tcp/ip  统一标准
+90年代   web
+
+wan 广域网   几十~几千千米 
+lan 局域网  1千米以内  办公室, 教室, 机房,宿舍
+
+cisco 思科 
+     华为
+路由器   交换机
+
+拓扑结构:
+点对点  广域网
+星形  局域网  易于实现,易于扩展,易于故障排查
+网状  局域网  增加可靠,提供容错
+
+iso 国际标准化组织   
+
+osi 七层参考模型,理论框架
+tcp/ip 五层  实际应用
+
+1000Mbit
+
+1000=1k
+1000k=1M
+
+1000000000
+
+传输层          数据段
+网络层	    数据包
+数据链路层   数据帧
+物理层 	    比特流
+
+视图
+用户视图 保存
+系统视图 
+接口视图
+协议视图
+
+ctrl+z 等于 return
+
+
+[Huawei]sysname SW1     //修改主机名
+[Huawei]display version     //查看软硬件版本
+[Huawei]display current-configuration    //查看正在运行的配置,按空格翻页
+
+aaa模式,负责授权认证审计,可以在此模式创建账户和密码
+
+ctrl + ]   彻底退出系统
+
+<Huawei>save      //保存设置
+<Huawei>reboot        //重启设备
+
+<Huawei>reset saved-configuration  //重置配置文件(恢复出厂)
+<Huawei>reboot        //重启设备
+
+ip 
+mac 硬件地址  物理地址 ,全球唯一不重复  48bit
+
+
+0123456789ABCDEF
+
+关闭各种信息提示(控制台超时后失效)
+undo terminal debugging
+undo terminal monitor 
+undo terminal logging 
+undo terminal trapping 
+
+设置控制台永不超时
+sys
+user-interface console 0
+idle-timeout 0
+
+
+
+
+
+
+
+
+
+
+
+
+

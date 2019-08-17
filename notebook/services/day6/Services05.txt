@@ -1,0 +1,179 @@
+客户端:开机启动,引导项
+  1.本机磁盘  2.光驱设备  3.U盘   4.网卡进行网络安装
+##################################################
+rsync同步操作
+
+rsync同步操作
+• 命令用法
+– rsync [选项...] 源目录 目标目录
+• 同步与复制的差异
+– 复制:完全拷贝源到目标
+– 同步:增量拷贝,只传输变化过的数据
+
+
+同步控制
+• rsync操作选项
+– -n:测试同步过程,不做实际修改
+– --delete:删除目标文件夹内多余的文档
+– -a:归档模式,相当于-rlptgoD
+– -v:显示详细操作信息
+– -z:传输过程中启用压缩/解压
+
+[root@svr7 ~]# rsync -a /boot /todir  //同步整个文件夹
+[root@svr7 ~]# rsync -a /boot/ /todir/ //只同步目录下的数据
+
+
+[root@svr7 ~]# mkdir /nsd19
+[root@svr7 ~]# mkdir /todir
+[root@svr7 ~]# cp /etc/passwd /nsd19
+[root@svr7 ~]# touch /nsd19/1.txt
+[root@svr7 ~]# ls /nsd19/
+[root@svr7 ~]# rsync -av  /nsd19   /todir/  #同步目录本身
+[root@svr7 ~]# ls /todir/
+[root@svr7 ~]# rsync -av  /nsd19/   /todir/ #同步目录内容
+[root@svr7 ~]# ls /todir/
+
+[root@svr7 ~]# echo haha >> /nsd19/1.txt 
+[root@svr7 ~]# cat /nsd19/1.txt
+[root@svr7 ~]# rsync -av /nsd19/   /todir/
+[root@svr7 ~]# cat /todir/1.txt 
+
+
+                                                             
+
+[root@svr7 ~]# rsync -av --delete  /nsd19/  /todir/
+[root@svr7 ~]# ls /todir/
+
+[root@svr7 ~]# touch	 /todir/{1..5}.txt
+[root@svr7 ~]# ls /todir/
+[root@svr7 ~]# rsync -av --delete  /nsd19/  /todir/
+[root@svr7 ~]# ls /todir/
+
+[root@svr7 ~]# touch	 /todir/nsd{1..5}.txt
+[root@svr7 ~]# ls /todir/
+[root@svr7 ~]# touch	 /nsd19/abc{1..5}.txt
+[root@svr7 ~]# ls /nsd19/
+[root@svr7 ~]# rsync -av --delete  /nsd19/  /todir/
+[root@svr7 ~]# ls /todir/
+####################################################
+远程同步(rsync+SSH同步)
+
+• 与远程的 SSH目录保持同步
+– 下行:rsync [...] user@host:远程目录      本地目录
+– 上行:rsync [...] 本地目录      user@host:远程目录
+
+虚拟机A的/nsd19/目录与虚拟机B的/opt/进行同步
+
+虚拟机A:
+]# rsync -av --delete /nsd19/  root@192.168.4.207:/opt/
+
+虚拟机B:
+]# ls  /opt
+###################################################
+实时远程同步
+
+一 虚拟机A通过公钥(id_rsa.pub) 私钥(id_rsa) ,实现ssh无密码验证
+[root@svr7 ~]# ssh-keygen  #一路回车
+[root@svr7 ~]# ls /root/.ssh/
+
+[root@svr7 ~]# ssh-copy-id root@192.168.4.207
+
+]# rsync -av --delete /nsd19/  root@192.168.4.207:/opt/
+
+ 拥有私钥的机器,可以无密码登录拥有公钥的机器
+
+二  监控/nsd19目录变化
+
+• Linux内核的 inotify 机制
+– 提供事件响应式的文件系统通知机制
+– 安装 inotify-tools 控制工具可调用此机制实现监控
+
+真机上:
+[student@room9pc01 ~]$ scp /linux-soft/01/tools.tar.gz  root@192.168.4.7:/root/
+
+1.虚拟机A找到该软件
+[root@svr7 ~]# tar -xf  /root/tools.tar.gz -C  /
+[root@svr7 ~]# ls /tools/
+inotify-tools-3.13.tar.gz  other
+
+2.安装gcc与make
+[root@svr7 ~]# yum -y install gcc  make 
+
+3.解包
+[root@svr7 ~]# tar -xf /tools/inotify-tools-3.13.tar.gz    -C  /opt
+
+4.运行configure脚本进行配置检测
+]# cd /opt/inotify-tools-3.13/
+]# ./configure 
+5.运行make进行编译
+]# make
+6,进行make  install 进行安装
+]# make install
+]# ls /usr/local/bin/inotifywait   #验证是否有运行程序
+/usr/local/bin/inotifywait
+
+
+
+• 基本用法
+– inotifywait [选项] 目标文件夹
+• 常用命令选项
+– -m,持续监控(捕获一个事件后不退出)
+– -r,递归监控、包括子目录及文件
+– -q,减少屏幕输出信息
+– -e,指定监视的modify、move、create、delete、attrib等事件类别
+
+
+
+
+书写同步的脚本rsync.sh
+     循环:for循环适合写有次数的循环 
+     死循环:while循环适合无限次数的循环 
+
+ 格式:     
+       while [条件]
+	   do
+               重复的代码
+	   done
+
+
+虚拟机A:
+[root@svr7 /]# vim /root/rsync.sh
+ #!/bin/bash
+ while  inotifywait -rqq /nsd19/
+ do
+  rsync -a --delete /nsd19/  root@192.168.4.207:/opt/
+ done
+[root@svr7 /]# chmod  +x  /root/rsync.sh
+[root@svr7 /]# /root/rsync.sh &
+[1] 8297
+[root@svr7 /]# jobs -l
+[root@svr7 /]# 
+
+################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 

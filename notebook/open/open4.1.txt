@@ -1,0 +1,100 @@
+ 案例3：LNMP+memcached
+步骤一：创建PHP页面，使用PHP语言测试memcached服务
+
+如果希望使用PHP来操作memcached，注意必须要为PHP安装memcache扩展（php-pecl-memcache），否则PHP无法解析连接memcached的指令。客户端测试时需要提前安装telnet远程工具。
+
+1）部署测试页面
+创建PHP首页文档/usr/local/nginx/html/mem.php，测试页面可以参考lnmp_soft/php_scripts/mem.php。
+注意：192.168.2.5是memcached数据库。
+
+root@web1 ~]# vim /usr/local/nginx/html/mem.php
+<?php
+$memcache=new Memcache;                //创建memcache对象
+$memcache->connect('192.168.2.5',11211) or die ('could not connect!!');
+$memcache->set('key','test');             //定义变量
+$get_values=$memcache->get('key');        //获取变量值
+echo $get_values;
+?>
+客户端测试（结果会失败）
+客户端使用浏览器访问服务器PHP首页文档，检验对memcached的操作是否成功：
+注意：这里因为没有给PHP安装扩展包，默认PHP无法连接memcached数据库，需要给PHP安装扩展模块才可以连接memcached数据库。
+3）为PHP添加memcache扩展
+yum -y install  php-pecl-memcache
+# systemctl restart php-fpm
+
+客户端再次测试（结果会成功显示数据结果）
+[root@web1 ~]# firefox http://192.168.2.100/mem.php
+
+案例4：PHP实现session共享
+步骤一：在后端LNMP服务器上部署Session共享
+
+注意：这些操作在两台后端Web服务器上均需要执行，以下操作以Web1（192.168.2.100）服务器为例。
+1）为PHP添加memcache扩展
+注意，因为后端两台web服务器(web1,web2)都需要连接memcached数据库，所以两台主机都需要安装PHP扩展模块(下面也web1为例)。
+
+
+修改PHP-FPM配置文件，并重启服务
+注意，因为后端两台web服务器(web1,web2)都需要修改配置文件(下面也web1为例)。
+[root@web1 ~]# vim  /etc/php-fpm.d/www.conf            //修改该配置文件的两个参数
+//文件的最后2行
+修改前效果如下:
+php_value[session.save_handler] = files
+php_value[session.save_path] = /var/lib/php/session
+//原始文件，默认定义Sessoin会话信息本地计算机（默认在/var/lib/php/session）
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+修改后效果如下:
+php_value[session.save_handler] = memcache
+php_value[session.save_path] = "tcp://192.168.2.5:11211"
+//定义Session信息存储在公共的memcached服务器上，主机参数中为memcache（没有d）
+//通过path参数定义公共的memcached服务器在哪（服务器的IP和端口）
+[root@web1 ~]# systemctl  restart  php-fpm
+
+步骤三：客户端测试
+
+客户端使用浏览器访问两台不同的Web服务器。
+操作步骤参考练习一，最终可以获得相关的Session ID信息。
+telnet 192.168.2.5 11211
+get 6d5l4ud9fsgmooacqmukkli2e6
+VALUE 6d5l4ud9fsgmooacqmukkli2e6 0 80
+login_user|s:4:"kill";logged_in|s:4:"true";id|s:26:"6d5l4ud9fsgmooacqmukkli2e6";
+END
+quit
+
+
+
+＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

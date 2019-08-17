@@ -1,0 +1,164 @@
+scp lnmp_soft.tar.gz root@192.168.4.10:/root/
+远程传输文件
+
+安装nginx
+yum -y install gcc pcre-devel openssl-deve　（make）
+useradd -s /sbin/nologin nginx
+
+scp lnmp_soft.tar.gz root@192.168.4.10:/root/
+远程传输文件
+
+[root@proxy ~]# ls /root
+Desktop  lnmp_soft.tar.gz
+
+[root@proxy ~]# tar -xf lnmp_soft.tar.gz //解压
+
+[root@proxy ~]# ls
+Desktop  lnmp_soft  lnmp_soft.tar.gz
+
+[root@proxy ~]# cd lnmp_soft/
+
+[root@proxy lnmp_soft]# ls
+
+[root@proxy lnmp_soft]# cd nginx-1.10.3/
+
+root@proxy nginx-1.10.3]# ./configure   \  (\另起一行)
+
+> --prefix=/usr/local/nginx   \                //指定安装路径
+> --user=nginx   \                            //指定用户
+> --group=nginx  \                            //指定组
+> --with-http_ssl_module                        //开启SSL加密功能
+[root@proxy nginx-1.10.3]# make && make install    //编译并安装
+
+nginx命令的用法
+[root@proxy ~]# /usr/local/nginx/sbin/nginx                    //启动服务
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s stop            //关闭服务
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload        //重新加载配置文件
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -V                //查看软件信息
+[root@proxy ~]# ln -s /usr/local/nginx/sbin/nginx /sbin/        //方便后期使用
+
+netstat命令可以查看系统中启动的端口信息，该命令常用选项如下：
+-a显示所有端口的信息
+-n以数字格式显示端口号
+-t显示TCP连接的端口
+-u显示UDP连接的端口
+-l显示服务正在监听的端口信息，如httpd启动后，会一直监听80端口
+-p显示监听端口的服务名称是什么（也就是程序名称）
+
+conf 配置文件
+html 网页
+logs 日志
+sbin
+
+更新nginx的版本,并备份老版本
+cd lnmp_soft/
+tar  -zxvf   nginx-1.12.2.tar.gz
+cd nginx-1.12.2
+[root@proxy nginx-1.12.2]# ./configure   \
+> --prefix=/usr/local/nginx   \ 
+> --user=nginx   \ 
+> --group=nginx  \ 
+> --with-http_ssl_module
+[root@proxy nginx-1.12.2]# make  
+
+
+[root@proxy nginx-1.12.2]# mv /usr/local/nginx/sbin/nginx  \
+>/usr/local/nginx/sbin/nginxold   //保留旧版本
+[root@proxy nginx-1.12.2]# cp objs/nginx  /usr/local/nginx/sbin/         //拷贝新版本
+[root@proxy nginx-1.12.2]# make upgrade                            //升级
+测试配置文件　+　-t
+/usr/local/nginx/sbin/nginx -t
+nginx: the configuration file /usr/local/nginx/conf/nginx.conf syntax is ok
+nginx: configuration file /usr/local/nginx/conf/nginx.conf test is successful
+#######################################################################################################33
+修改配置文件
+用户验证登录:
+vim /usr/local/nginx/conf/nginx.conf
+
+server {
+        listen       80;
+        server_name  localhost;    //域名
+        auth_basic "Input Password:";                        //认证提示符信息   (引号内可随意输出)
+        auth_basic_user_file "/usr/local/nginx/pass";        //认证的密码文件
+        location / {
+            root   html;     // 网页文件
+            index  index.html index.htm;
+        }
+  }
+  yum -y install httpd-tools.x86_64    //yum 装加密用户密码的包
+  htpasswd -c /usr/local/nginx/pass tom  //创建pass文件并创建用户tom
+  htpasswd /usr/local/nginx/pass jeery   //-c只适合第一次创建
+  /usr/local/nginx/sbin/nginx -s reload  //刷新配置文件
+###########################################################
+实现两个基于域名的虚拟主机，域名分别为www.a.com和www.b.com
+对域名为www.a.com的站点进行用户认证，用户名称为tom，密码为123456
+
+vim /usr/local/nginx/conf/nginx.conf
+
+在配置文件下有已注释的一个配置文件
+
+server {
+        listen  80;                                        //端口
+        server_name  www.b.com;                                //域名
+location / { 
+root   www;                                 //指定网站根路径
+index  index.html index.htm;
+}
+}
+
+mkdir /usr/local/nginx/www
+echo "www" > /usr/local/nginx/www/index.html
+/usr/local/nginx/sbin/nginx -s reload
+
+
+修改客户端主机192.168.4.10的/etc/hosts文件进行域名解析
+ [root@client ~]# vim /etc/hosts
+192.168.4.5    www.a.com  www.b.com
+
+###################
+   加密
+源码安装Nginx时必须使用--with-http_ssl_module参数，启用加密模块，对于需要进行SSL加密处理的站点添加ssl相关指令（设置网站需要的私钥和证书）。
+加密算法一般分为对称算法、非对称算法、信息摘要。
+对称算法有：AES、DES，主要应用在单机数据加密。
+非对称算法有：RSA、DSA，主要应用在网络数据加密。
+信息摘要：MD5、sha256，主要应用在数据完整性校验。
+安全的nginx
+1.生成秘钥和证书
+]# cd /usr/local/nginx/conf
+]# openssl genrsa > cert.key                            //生成私钥
+]# openssl req -new -x509 -key cert.key > cert.pem      //生成证书
+ls  /usr/local/nginx/conf/
+2.修改Nginx配置文件，设置加密网站的虚拟主机
+100     server {
+101         listen       443 ssl;
+102         server_name  www.tedu.cn;
+103 
+104 auth_basic "input password" ;
+105 auth_basic_user_file "/usr/local/nginx/pass";         //用户验证
+106         ssl_certificate     cert.pem;   //写证书     (可以加绝对路径)
+107         ssl_certificate_key  cert.key;   //写秘钥
+108 
+109         ssl_session_cache    shared:SSL:1m; #//}
+110         ssl_session_timeout  5m;             #//}
+111 
+112         ssl_ciphers  HIGH:!aNULL:!MD5;      #//} 这里不用改
+113         ssl_prefer_server_ciphers  on;      #//}
+114 
+115         location / {
+116             root  tedu;
+117             index  index.html index.htm;
+118         }
+119     }
+120 
+121  }
+
+3.重新加载配置
+root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload
+#请先确保nginx是启动状态，否则运行该命令会报错,报错信息如下：
+#[error] open() "/usr/local/nginx/logs/nginx.pid" failed (2: No such file or directory)
+MD5　信息摘要
+md5sum /etc/passwd
+d8210cafaefbd209b3f8991ea768f438  /etc/passwd　/随机值 判断数据是否被篡改　校验数据的HASH值
+
+
+

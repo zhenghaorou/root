@@ -1,0 +1,193 @@
+设置变量初值(备用值)
+${a:-XXX}   //当变量a有值时,使用自身的值,是空时使用XXX
+
+case 变量 in
+模式1)
+	命令序列1 ;;
+模式2)
+	命令序列2 ;;
+*)
+	命令序列3
+esac
+
+函数
+
+函数名(){
+	命令序列
+}
+
+function 函数名 {
+	命令序列
+}
+
+echo -e "\033[31mABCD\033[0m"
+
+循环的中断
+1,exit
+2,break
+3,continue
+
+字串处理
+1,字串截取
+${a:}
+2,字串替换
+${a/}
+3,字串删除
+掐头 ${a#}
+去尾 ${a%}
+
+设置初值
+${a:-}
+
+正则表达式,可以对文本匹配查找,配合很多工具实现丰富的功能
+基本正则:
+
+grep ^$ user      //搜索空行
+grep "^ " user    //搜以空格开头的行
+grep " $" user    //搜以空格结尾的行
+
+grep "[bin]" user   //搜索字母b或者i或者n
+grep "roo[tdg]" user  //搜索root或者rood或者roog
+
+grep "[a-z]" user    //找所有小写字母
+grep "[0-9]" user    //找所有数字
+grep "[A-Z]" user    //找所有大写字母
+grep "[rot]" user    //找r或o或t
+grep "[^rot]" user   //找除了r或o或t之外的字符
+grep "[^0-9]" user   //不找数字
+grep "[^a-z]" user   //不找小写字母
+grep "[^a-zA-Z]" user   //不找字母
+
+grep "." user      //找任意字符
+grep "roo." user    //找roo后面追加1个任意字符
+grep "ro.." user    //找ro后面追加2个任意字符
+grep "^." user     //找以任意字符开头的行
+grep ".$" user    //找以任意字符结尾的行
+grep ".*" user     //找任意 
+grep "*" user     //不能单独使用
+grep "a*" user    //找有a的行,a可以出现任意次,包括0次
+
+grep "o\{1,2\}" user   //搜索o出现了1到2次
+grep "o\{2\}" user    //搜索o出现了2次
+grep "o\{1,\}" user    //搜索o出现了1次以及1次以上
+grep "o\{2,\}" user   //搜索o出现了2次以及2次以上
+grep "o\{3,\}" user   //搜索o出现了3次以及3次以上
+grep "\(0:\)\{2\}" user 
+
+扩展正则
+\{\}  可以 省略为 { }
+\(\)  可以 省略为 ()
+egrep "(0:){2}" user   //搜索2个0:连在一起的行
+grep -E "(0:){2}" user   //效果同上
+
++   相当于   \{1,\}     //匹配前一个字符1次以及1次以上
+?   相当于   \{0,1\}   //匹配前一个字符0次或1次
+
+
+172.40.50.115
+/var/ftp/pub
+
+vim  交互式
+sed  流式编辑器, 非交互式, 增删改查, 逐行处理
+使用方式
+1,  前置命令 | sed 选项  定址符 指令
+2, sed 选项  定址符 指令  操作的文件
+选项:
+1, -n  屏蔽默认输出
+2, -r  支持扩展正则表达式
+3, -i  写入文件
+指令
+p  输出文档内容
+sed -n '1p' user    //输出第1行
+sed -n '2,4p' user  //输出2~4行
+sed -n '3p;5p' user     //输出3行和5行
+sed -n '2,+2p' user   //输出第2行,以及后面2行
+sed -n '1~2p' user  //查看奇数行
+sed -n '2~2p' user  //查看偶数行
+sed的定址符可以使用正则表达式, 在  /  /  中间填写
+sed -n '/root/p'  user   //查看有root的行
+sed -n '/^root/p'  user   //查看以root开头的行
+sed -n '='  user   //看所有行的行号
+sed -n '$=' user   //看最后一行的行号
+
+d  删除行,使用方式和指令p基本一致,注意无需加 -n选项
+sed '1d' user    //删除第1行
+
+s 替换
+s/old/new/
+s///
+
+
+sed 's/2017/XXXX/' test     //替换文档中所有行的第1个2017
+sed '2s/2017/XXXX/' test    //替换第2行的第1个2017
+sed '2s/2017/XXXX/2' test   //替换第2行的第2个2017
+
+sed '3s/2017/XXXX/3;3s/2017/XXXX/2' test  //替换第3行的第三个2017, 再替换第3行的第2个2017
+
+sed 's/2017/XXXX/g' test    //替换所有2017
+sed 's/2017//' test    //将所有行的第1个2017替换为空,等于删除
+sed -n 's/root//p' /etc/passwd   //替换passwd文件中所有行的第一个root为空,并显示替换的行
+
+尝试使用sed替换功能将 /bin/bash 替换为 /sbin/sh
+
+sed 's//bin/bash//sbin/sh/' user    //常规方式更换,报错
+sed 's/\/bin\/bash/\/sbin\/sh/' user   //使用转义符号屏蔽冲突的斜杠, 可以成功,但麻烦
+sed 's!/bin/bash!/sbin/sh!' user  //更改替换符号为! 
+sed 's(/bin/bash(/sbin/sh(' user  //或用( 
+
+
+删除文件中每行的第二个、最后一个字符
+sed 's/.//2;s/.$//' test
+
+
+将文件中每行的第1个、第2个字符互换
+abc
+sed -r 's/(.)(.)(.*)/\2\1\3/' abc
+
+
+sed -r 's/(.)(.)(.*)/\2\1\3/' test
+
+将文件中每行的第1个、最后1个字符互换
+
+sed -r 's/^(.)(.*)(.)$/\3\2\1/' test
+
+
+删除文件中所有的数字
+sed 's/[0-9]//g'   test  //找到所有数字,替换成空
+
+为文件中每个大写字母添加括号
+sed -r 's/([A-Z])/(\1)/' test  //找到所有大写字母,并复制,然后在后面粘贴时,添加括号
+
+
+编写脚本,一键部署ftp服务,并实现匿名上传普通文件功能
+#!/bin/bash
+yum -y install vsftpd  &> /dev/null
+sed -i 's/^#anon_u/anon_u/'   /etc/vsftpd/vsftpd.conf
+systemctl restart vsftpd
+systemctl enable vsftpd
+systemctl stop firewalld     //临时关闭防火墙
+chmod 777 /var/ftp/pub     //给pub目录权限
+setenforce 0    //关闭selinux
+
+脚本运行后,用真机访问虚拟机的ftp,可以拖拽普通文件到pub目录中
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
